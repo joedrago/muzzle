@@ -406,7 +406,7 @@ export class ChunkManager {
 
     cleanup(canvasAspect, skipInside = false) {
         const pw = this.puzzleData.pieceW
-        const minMargin = pw * 1.5 // enough to clear tab overhang on both sides
+        const minMargin = pw * 0.75
 
         const allChunks = Array.from(this.chunks.values())
         if (allChunks.length === 0) return null
@@ -522,7 +522,21 @@ export class ChunkManager {
             chunk.setPosition(cellCenterX - rotatedCenter[0], cellCenterY - rotatedCenter[1])
         }
 
-        return { totalW, totalH }
+        // Compute actual bounding box of ALL chunks (organized + skipped)
+        let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
+            maxY = -Infinity
+        for (const chunk of allChunks) {
+            const center = this.getChunkWorldCenter(chunk.id)
+            const size = this._getChunkWorldSize(chunk)
+            minX = Math.min(minX, center[0] - size.w / 2)
+            maxX = Math.max(maxX, center[0] + size.w / 2)
+            minY = Math.min(minY, center[1] - size.h / 2)
+            maxY = Math.max(maxY, center[1] + size.h / 2)
+        }
+
+        return { totalW: maxX - minX, totalH: maxY - minY, centerX: (minX + maxX) / 2, centerY: (minY + maxY) / 2 }
     }
 
     // ── Rotation around center ──────────────────────────

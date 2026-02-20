@@ -39,6 +39,7 @@ export class UIManager {
         this.btnNew = document.getElementById("btn-new")
         this.btnSolution = document.getElementById("btn-solution")
         this.btnCleanup = document.getElementById("btn-cleanup")
+        this.btnShare = document.getElementById("btn-share")
         this.btnHelp = document.getElementById("btn-help")
         this.btnFullscreen = document.getElementById("btn-fullscreen")
         this.btnMute = document.getElementById("btn-mute")
@@ -61,9 +62,15 @@ export class UIManager {
     }
 
     _bind() {
+        // Blur toolbar buttons after click so keyboard shortcuts (e.g. Space) aren't captured
+        this.toolbar.addEventListener("click", (e) => {
+            if (e.target.tagName === "BUTTON") e.target.blur()
+        })
+
         this.btnNew.addEventListener("click", () => this.showPuzzleSelect())
         this.btnSolution.addEventListener("click", () => this.app.toggleSolution())
         this.btnCleanup.addEventListener("click", () => this._onCleanup())
+        this.btnShare.addEventListener("click", () => this._onShare())
         this.btnHelp.addEventListener("click", () => this.app.toggleHelp())
         this.btnFullscreen.addEventListener("click", () => this.app.toggleFullscreen())
         this.btnMute.addEventListener("click", () => this.app.toggleMute())
@@ -138,7 +145,37 @@ export class UIManager {
     }
 
     showPuzzleSelect() {
+        this._populateFromCurrent()
         this._showDialog(this.puzzleDialog)
+    }
+
+    _populateFromCurrent() {
+        const config = this.app.puzzleConfig
+        if (!config) return
+
+        // Match URL to a preset, or fall back to custom
+        const presetIdx = PRESETS.findIndex((p) => p.url === config.url)
+        const customInput = document.getElementById("custom-url-input")
+
+        if (presetIdx >= 0) {
+            document.getElementById(`preset-${presetIdx}`).checked = true
+            customInput.disabled = true
+            customInput.value = ""
+        } else {
+            document.querySelector('input[name="puzzle-source"][value="custom"]').checked = true
+            customInput.disabled = false
+            customInput.value = config.url
+        }
+
+        // Piece count — find closest option
+        const totalPieces = config.cols * config.rows
+        const select = document.getElementById("piece-count-select")
+        const options = Array.from(select.options).map((o) => parseInt(o.value))
+        const closest = options.reduce((a, b) => (Math.abs(b - totalPieces) < Math.abs(a - totalPieces) ? b : a))
+        select.value = String(closest)
+
+        // Rotation
+        document.getElementById("rotation-checkbox").checked = config.rotationEnabled
     }
 
     closePuzzleSelect() {
@@ -199,6 +236,21 @@ export class UIManager {
 
         this.closePuzzleSelect()
         this.app.startNewPuzzle({ url, type, name, pieceCount, rotationEnabled })
+    }
+
+    async _onShare() {
+        const url = this.app.getShareUrl()
+        if (!url) return
+        try {
+            await navigator.clipboard.writeText(url)
+            this.btnShare.textContent = "Copied!"
+            setTimeout(() => {
+                this.btnShare.textContent = "Share"
+            }, 2000)
+        } catch (_e) {
+            // Fallback: select a prompt with the URL
+            window.prompt("Copy this link to share:", url)
+        }
     }
 
     async _onCleanup() {

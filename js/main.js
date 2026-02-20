@@ -48,6 +48,28 @@ class App {
     }
 
     async _init() {
+        // Check for share link query params
+        const shareParams = this._parseShareParams()
+        if (shareParams) {
+            // Strip query string from URL immediately
+            window.history.replaceState({}, "", window.location.pathname)
+
+            const saved = this.state.load()
+            if (saved) {
+                this._startRenderLoop()
+                try {
+                    await this._restorePuzzle(saved)
+                } catch (_e) {
+                    this.state.clear()
+                }
+                const yes = await this.ui.confirm("Open a shared puzzle? This will replace your current one.")
+                if (!yes) return
+            }
+            this.startNewPuzzle(shareParams)
+            this._startRenderLoop()
+            return
+        }
+
         // Try to restore saved state
         const saved = this.state.load()
         if (saved) {
@@ -63,6 +85,29 @@ class App {
         // No saved state — show puzzle selection
         this.ui.showPuzzleSelect()
         this._startRenderLoop()
+    }
+
+    _parseShareParams() {
+        const params = new URLSearchParams(window.location.search)
+        const url = params.get("u")
+        if (!url) return null
+        return {
+            url,
+            pieceCount: parseInt(params.get("n")) || 100,
+            rotationEnabled: params.get("r") !== "0",
+            seed: parseInt(params.get("s")) || null,
+            name: "Shared Puzzle"
+        }
+    }
+
+    getShareUrl() {
+        if (!this.puzzleConfig) return null
+        const params = new URLSearchParams()
+        params.set("u", this.puzzleConfig.url)
+        params.set("n", this.puzzleConfig.cols * this.puzzleConfig.rows)
+        params.set("r", this.puzzleConfig.rotationEnabled ? "1" : "0")
+        params.set("s", this.puzzleConfig.seed)
+        return window.location.origin + window.location.pathname + "?" + params.toString()
     }
 
     // ── Puzzle lifecycle ──────────────────────────────
@@ -82,8 +127,8 @@ class App {
             // Calculate grid
             const { cols, rows } = calculateGrid(pieceCount, aspectRatio)
 
-            // Generate seed
-            const seed = Math.floor(Math.random() * 2147483647)
+            // Use provided seed or generate a new one
+            const seed = opts.seed || Math.floor(Math.random() * 2147483647)
 
             // Store config
             this.puzzleConfig = {
@@ -118,6 +163,8 @@ class App {
             // Show audio controls for video
             if (mediaType === "video") {
                 this.ui.showAudioControls()
+                this.ui.updateMuteButton(this.media.getMuted())
+                this.ui.updateVolume(this.media.getVolume())
                 if (this.media.needsAutoplay) {
                     this.ui.showVideoPlayOverlay()
                 }
@@ -176,13 +223,13 @@ class App {
             this.input.cm = this.cm
         }
 
-        // Audio
+        // Audio — always start muted so autoplay isn't blocked by the browser
         if (p.type === "video") {
             this.ui.showAudioControls()
             this.media.setVolume(saved.volume || 0.5)
-            this.media.setMuted(saved.muted !== undefined ? saved.muted : true)
+            this.media.setMuted(true)
             this.ui.updateVolume(saved.volume || 0.5)
-            this.ui.updateMuteButton(saved.muted !== undefined ? saved.muted : true)
+            this.ui.updateMuteButton(true)
             if (this.media.needsAutoplay) {
                 this.ui.showVideoPlayOverlay()
             }
@@ -378,14 +425,18 @@ class App {
 
     cleanup(skipInside = false) {
         const cam = this.renderer.camera
-        const aspect = this.canvas.width / this.canvas.height
+        const dpr = window.devicePixelRatio || 1
+        const toolbarPx = 44 * dpr
+        const usableW = this.canvas.width
+        const usableH = this.canvas.height - toolbarPx
+        const aspect = usableW / usableH
         const bounds = this.cm.cleanup(aspect, skipInside)
         if (bounds) {
-            // Center camera on the layout and zoom to fit
-            cam.x = 0
-            cam.y = 0
+            // Zoom to fit, then center on bounding box offset for toolbar
             const pad = 0.9 // 10% padding
-            cam.zoom = Math.min((this.canvas.width * pad) / bounds.totalW, (this.canvas.height * pad) / bounds.totalH)
+            cam.zoom = Math.min((usableW * pad) / bounds.totalW, (usableH * pad) / bounds.totalH)
+            cam.x = bounds.centerX
+            cam.y = bounds.centerY - toolbarPx / (2 * cam.zoom)
         }
         this._needsRender = true
         this.state.markDirty()
