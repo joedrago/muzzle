@@ -151,7 +151,7 @@ export class InputManager {
 
     // ── Mouse up ──────────────────────────────────────
 
-    _onMouseUp(_e) {
+    _onMouseUp(e) {
         switch (this.state) {
             case PENDING_PICK:
                 // Was a click, not a drag — enter HOLDING_CLICK mode
@@ -160,8 +160,8 @@ export class InputManager {
                 break
 
             case HOLDING_DRAG:
-                // Drop the chunk
-                this._dropHeld()
+                // Only drop on left button release, not right (which is rotate)
+                if (e.button === 0) this._dropHeld()
                 break
 
             case SELECTING:
