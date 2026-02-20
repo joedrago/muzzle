@@ -10,31 +10,18 @@ export const WORLD_PIECE_SIZE = 100 // base piece size in world pixels
 
 // ── Grid calculation ──────────────────────────────────
 
-export function calculateGrid(pieceCount, aspectRatio) {
-    let cols = Math.round(Math.sqrt(pieceCount * aspectRatio))
-    let rows = Math.round(cols / aspectRatio)
-
-    // Adjust to get close to desired count
-    if (cols < 1) cols = 1
-    if (rows < 1) rows = 1
-
-    // Fine-tune: try nearby values
-    let best = cols * rows
-    let bestCols = cols,
-        bestRows = rows
-    for (let c = cols - 1; c <= cols + 1; c++) {
-        for (let r = rows - 1; r <= rows + 1; r++) {
-            if (c < 1 || r < 1) continue
-            const count = c * r
-            if (Math.abs(count - pieceCount) < Math.abs(best - pieceCount)) {
-                best = count
-                bestCols = c
-                bestRows = r
-            }
-        }
+export function calculateGrid(shortSide, aspectRatio) {
+    if (aspectRatio >= 1) {
+        // Landscape or square: short side is rows
+        const rows = Math.max(1, shortSide)
+        const cols = Math.max(1, Math.round(rows * aspectRatio))
+        return { cols, rows }
+    } else {
+        // Portrait: short side is cols
+        const cols = Math.max(1, shortSide)
+        const rows = Math.max(1, Math.round(cols / aspectRatio))
+        return { cols, rows }
     }
-
-    return { cols: bestCols, rows: bestRows }
 }
 
 // ── Edge assignment ───────────────────────────────────

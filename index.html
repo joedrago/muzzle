@@ -17,6 +17,7 @@
                 <button id="btn-cleanup" title="Reorganize Pieces">Cleanup</button>
                 <button id="btn-share" title="Copy share link">Share</button>
                 <button id="btn-help" title="Help (H)">Help</button>
+                <span id="puzzle-dims" style="display: none"></span>
             </div>
             <div id="toolbar-right">
                 <div id="audio-controls" style="display: none">
@@ -39,13 +40,12 @@
             </div>
             <div id="puzzle-options">
                 <label
-                    >Pieces:
-                    <select id="piece-count-select">
-                        <option value="24">24</option>
-                        <option value="48">48</option>
-                        <option value="100" selected>100</option>
-                        <option value="200">200</option>
-                        <option value="400">400</option>
+                    >Piece size:
+                    <select id="piece-size-select">
+                        <option value="4">Large</option>
+                        <option value="7" selected>Medium</option>
+                        <option value="11">Small</option>
+                        <option value="18">Tiny</option>
                     </select>
                 </label>
                 <label> <input type="checkbox" id="rotation-checkbox" checked /> Shuffle rotation </label>

@@ -1,32 +1,55 @@
 // ── Preset puzzles ────────────────────────────────────
 
-export const PRESETS = [
+const DEFAULT_PRESETS = [
     {
         name: "Sunset Mountains",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/1280px-Sunrise_over_the_sea.jpg",
+        thumbnail:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/200px-Sunrise_over_the_sea.jpg",
         type: "image"
     },
     {
         name: "Starry Night",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+        thumbnail:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
         type: "image"
     },
     {
         name: "Coral Reef",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/1280px-Coral_reef_at_palmyra.jpg",
+        thumbnail:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/200px-Coral_reef_at_palmyra.jpg",
         type: "image"
     },
     {
         name: "Earth from Space",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg",
+        thumbnail:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/200px-The_Earth_seen_from_Apollo_17.jpg",
         type: "image"
     },
     {
         name: "Japanese Garden",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/1280px-Japanese_garden_%28Cowden%29.jpg",
+        thumbnail:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/200px-Japanese_garden_%28Cowden%29.jpg",
         type: "image"
     }
 ]
+
+export let PRESETS = DEFAULT_PRESETS
+
+export async function loadLocalPresets() {
+    try {
+        const mod = await import("../presets.local.js")
+        if (Array.isArray(mod.default) && mod.default.length > 0) {
+            PRESETS = mod.default
+        }
+    } catch (_e) {
+        // presets.local.js doesn't exist — use defaults
+    }
+}
 
 // ── UI Manager ────────────────────────────────────────
 
@@ -98,12 +121,15 @@ export class UIManager {
         })
 
         // Custom URL radio toggle
-        const radios = document.querySelectorAll('input[name="puzzle-source"]')
-        radios.forEach((radio) => {
-            radio.addEventListener("change", () => {
-                document.getElementById("custom-url-input").disabled =
-                    document.querySelector('input[name="puzzle-source"]:checked')?.value !== "custom"
-            })
+        const customRadio = document.querySelector('input[name="puzzle-source"][value="custom"]')
+        customRadio.addEventListener("change", () => {
+            if (customRadio.checked) {
+                document.getElementById("custom-url-input").disabled = false
+                document
+                    .getElementById("preset-list")
+                    .querySelectorAll(".preset-item")
+                    .forEach((el) => el.classList.remove("selected"))
+            }
         })
     }
 
@@ -113,13 +139,23 @@ export class UIManager {
 
         PRESETS.forEach((preset, idx) => {
             const div = document.createElement("div")
-            div.className = "preset-item"
+            div.className = "preset-item" + (idx === 0 ? " selected" : "")
+            const thumbHtml = preset.thumbnail
+                ? `<img class="preset-thumb" src="${preset.thumbnail}" alt="${preset.name}" loading="lazy"
+                    onerror="this.outerHTML='<div class=\\'preset-thumb-placeholder\\'>?</div>'">`
+                : `<div class="preset-thumb-placeholder">?</div>`
+            div.dataset.name = preset.name + (preset.type === "video" ? " (video)" : "")
             div.innerHTML = `
-        <input type="radio" name="puzzle-source" value="preset-${idx}" id="preset-${idx}"
-          ${idx === 0 ? "checked" : ""}>
-        <label for="preset-${idx}">${preset.name}</label>
-        <span class="preset-type ${preset.type}">${preset.type}</span>
-      `
+                <input type="radio" name="puzzle-source" value="preset-${idx}" id="preset-${idx}"
+                  ${idx === 0 ? "checked" : ""}>
+                ${thumbHtml}
+            `
+            div.addEventListener("click", () => {
+                list.querySelectorAll(".preset-item").forEach((el) => el.classList.remove("selected"))
+                div.classList.add("selected")
+                document.getElementById(`preset-${idx}`).checked = true
+                document.getElementById("custom-url-input").disabled = true
+            })
             list.appendChild(div)
         })
     }
@@ -157,8 +193,14 @@ export class UIManager {
         const presetIdx = PRESETS.findIndex((p) => p.url === config.url)
         const customInput = document.getElementById("custom-url-input")
 
+        const list = document.getElementById("preset-list")
+        list.querySelectorAll(".preset-item").forEach((el) => el.classList.remove("selected"))
+
         if (presetIdx >= 0) {
             document.getElementById(`preset-${presetIdx}`).checked = true
+            const selectedItem = list.children[presetIdx]
+            selectedItem?.classList.add("selected")
+            selectedItem?.scrollIntoView({ block: "nearest" })
             customInput.disabled = true
             customInput.value = ""
         } else {
@@ -167,11 +209,11 @@ export class UIManager {
             customInput.value = config.url
         }
 
-        // Piece count — find closest option
-        const totalPieces = config.cols * config.rows
-        const select = document.getElementById("piece-count-select")
+        // Piece size — map short side of current grid to closest option
+        const shortSide = Math.min(config.cols, config.rows)
+        const select = document.getElementById("piece-size-select")
         const options = Array.from(select.options).map((o) => parseInt(o.value))
-        const closest = options.reduce((a, b) => (Math.abs(b - totalPieces) < Math.abs(a - totalPieces) ? b : a))
+        const closest = options.reduce((a, b) => (Math.abs(b - shortSide) < Math.abs(a - shortSide) ? b : a))
         select.value = String(closest)
 
         // Rotation
@@ -231,11 +273,11 @@ export class UIManager {
             name = preset.name
         }
 
-        const pieceCount = parseInt(document.getElementById("piece-count-select").value)
+        const pieceSize = parseInt(document.getElementById("piece-size-select").value)
         const rotationEnabled = document.getElementById("rotation-checkbox").checked
 
         this.closePuzzleSelect()
-        this.app.startNewPuzzle({ url, type, name, pieceCount, rotationEnabled })
+        this.app.startNewPuzzle({ url, type, name, pieceSize, rotationEnabled })
     }
 
     async _onShare() {
@@ -257,6 +299,18 @@ export class UIManager {
         const yes = await this.confirm("This will reorganize all pieces into a grid. Continue?")
         if (yes) {
             this.app.cleanup(true)
+        }
+    }
+
+    // ── Puzzle dimensions ─────────────────────────────
+
+    updatePuzzleDims(cols, rows) {
+        const el = document.getElementById("puzzle-dims")
+        if (cols && rows) {
+            el.textContent = `${cols}\u00d7${rows} (${cols * rows} pieces)`
+            el.style.display = ""
+        } else {
+            el.style.display = "none"
         }
     }
 

@@ -4,7 +4,7 @@ import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
 import { StateManager } from "./state.js"
-import { UIManager } from "./ui.js"
+import { UIManager, loadLocalPresets } from "./ui.js"
 import { mat3 } from "./math-utils.js"
 
 class App {
@@ -48,6 +48,8 @@ class App {
     }
 
     async _init() {
+        await loadLocalPresets()
+
         // Check for share link query params
         const shareParams = this._parseShareParams()
         if (shareParams) {
@@ -93,7 +95,8 @@ class App {
         if (!url) return null
         return {
             url,
-            pieceCount: parseInt(params.get("n")) || 100,
+            cols: parseInt(params.get("cols")) || null,
+            rows: parseInt(params.get("rows")) || null,
             rotationEnabled: params.get("r") !== "0",
             seed: parseInt(params.get("s")) || null,
             name: "Shared Puzzle"
@@ -104,7 +107,8 @@ class App {
         if (!this.puzzleConfig) return null
         const params = new URLSearchParams()
         params.set("u", this.puzzleConfig.url)
-        params.set("n", this.puzzleConfig.cols * this.puzzleConfig.rows)
+        params.set("cols", this.puzzleConfig.cols)
+        params.set("rows", this.puzzleConfig.rows)
         params.set("r", this.puzzleConfig.rotationEnabled ? "1" : "0")
         params.set("s", this.puzzleConfig.seed)
         return window.location.origin + window.location.pathname + "?" + params.toString()
@@ -113,7 +117,7 @@ class App {
     // ── Puzzle lifecycle ──────────────────────────────
 
     async startNewPuzzle(opts) {
-        const { url, type, name, pieceCount, rotationEnabled } = opts
+        const { url, type, name, pieceSize, rotationEnabled } = opts
 
         this.ui.hideCelebration()
         this.completed = false
@@ -124,8 +128,8 @@ class App {
             const mediaType = type || detectMediaType(url)
             const { aspectRatio } = await this.media.load(url, mediaType)
 
-            // Calculate grid
-            const { cols, rows } = calculateGrid(pieceCount, aspectRatio)
+            // Use explicit cols/rows (shared puzzles) or calculate from piece size
+            const { cols, rows } = opts.cols && opts.rows ? opts : calculateGrid(pieceSize || 7, aspectRatio)
 
             // Use provided seed or generate a new one
             const seed = opts.seed || Math.floor(Math.random() * 2147483647)
@@ -140,6 +144,7 @@ class App {
                 rows,
                 rotationEnabled
             }
+            this.ui.updatePuzzleDims(cols, rows)
 
             // Generate puzzle geometry
             this.puzzleData = generatePuzzle(cols, rows, seed, this.renderer)
@@ -197,6 +202,7 @@ class App {
             rows: p.rows,
             rotationEnabled: p.rotationEnabled
         }
+        this.ui.updatePuzzleDims(p.cols, p.rows)
 
         // Regenerate puzzle geometry from seed
         this.puzzleData = generatePuzzle(p.cols, p.rows, p.seed, this.renderer)
@@ -340,7 +346,7 @@ class App {
             const puzzleW = this.puzzleData.puzzleWidth
             const puzzleH = this.puzzleData.puzzleHeight
             // Center the overlay at the origin so it's visible after cleanup or at start
-            r.drawSolutionOverlay(texture, -puzzleW / 2, -puzzleH / 2, puzzleW, puzzleH, 0.5)
+            r.drawSolutionOverlay(texture, -puzzleW / 2, -puzzleH / 2, puzzleW, puzzleH, 0.25)
         }
     }
 
