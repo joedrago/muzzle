@@ -1,9 +1,11 @@
 # Muzzle - WebGL Jigsaw Puzzle
 
 ## Project Overview
+
 Static zero-build-tool web app for playing jigsaw puzzles in WebGL. Special feature: puzzle source can be a looping MP4 video, making pieces appear animated. All state auto-persists to localStorage.
 
 ## File Structure
+
 ```
 muzzle/
 ├── index.html              # Single page entry point, canvas + toolbar + dialogs
@@ -26,6 +28,7 @@ muzzle/
 ```
 
 ## Mandatory Workflow
+
 - **Always run `npx prettier --write .` and `npx eslint .` after ANY JS changes.** Fix all lint errors before considering work complete.
 - Prettier config: `package.json` → printWidth:130, tabWidth:4, trailingComma:none, semi:false
 - ESLint config: `eslint.config.js` → @eslint/js recommended + no-unused-vars with `^_` ignore patterns
@@ -34,14 +37,16 @@ muzzle/
 ## Architecture Details
 
 ### WebGL Rendering (renderer.js)
+
 - WebGL1 with two shader programs: **piece shader** (textured, with alpha) and **flat shader** (solid color for selection rect)
 - Camera system: `{ x, y, zoom }` — pan offset in world coords, zoom scalar
-- Camera matrix: column-major mat3 — translate(-cam) * scale(zoom) * scale(2/w, -2/h)
+- Camera matrix: column-major mat3 — translate(-cam) _ scale(zoom) _ scale(2/w, -2/h)
 - `screenToWorld()` / `worldToScreen()` for coordinate conversion
 - `zoomAtScreen()` — zoom centered on cursor position
 - Textures: `createTexture(source)`, `updateTexture(tex, source)` for video frames
 
 ### Puzzle Generation (puzzle.js)
+
 - `calculateGrid(pieceCount, aspectRatio)` → { cols, rows }
 - Seeded PRNG (mulberry32) ensures deterministic shapes from seed
 - Edge types: EDGE_NONE (border), EDGE_POS (tab), EDGE_NEG (blank)
@@ -52,6 +57,7 @@ muzzle/
 - `WORLD_PIECE_SIZE = 100` — base piece size in world pixels
 
 ### Piece/Chunk System (piece.js)
+
 - **Chunk class**: id, pieces Set, x/y position, rotation (0/90/180/270), cached worldMatrix
 - **ChunkManager**: manages all chunks, handles snap detection, merging, hit testing
 - Initially every piece is its own chunk
@@ -63,6 +69,7 @@ muzzle/
 - `serialize()` / `restoreChunks()` for save/load
 
 ### Input System (input.js)
+
 - State machine: IDLE → PENDING_PICK → HOLDING_CLICK or HOLDING_DRAG
 - IDLE → SELECTING (left drag on background)
 - IDLE → PANNING (right drag on background)
@@ -72,18 +79,21 @@ muzzle/
 - Scroll wheel: zoom at cursor
 
 ### Media (media.js)
+
 - Auto-detects image vs video from URL extension
 - Video: `<video>` element, loop, playsinline, muted initially for autoplay
 - Video texture updated per-frame via `texImage2D` in render loop
 - Autoplay fallback: shows "Click to Start Video" overlay
 
 ### State (state.js)
+
 - localStorage key: `muzzle_puzzle_state`
 - Debounced save (1.5s) + immediate save on beforeunload
 - Save format version 1: puzzle config (url, seed, cols, rows) + chunk positions + camera + completion
 - Key insight: piece geometry NOT saved — regenerated deterministically from seed
 
 ### UI (ui.js)
+
 - 5 preset puzzles from Wikimedia Commons (all images currently)
 - Puzzle selection dialog: presets + custom URL, piece count dropdown, rotation checkbox
 - Confirmation dialog for cleanup
@@ -91,6 +101,7 @@ muzzle/
 - Celebration: CSS confetti particles, auto-dismiss after 6s, "Complete!" badge
 
 ## Known Issues / TODO
+
 - No touch event support (desktop only)
 - Solution overlay doesn't account for tab overhang beyond piece bounds
 - No spatial indexing for hit testing (may slow down beyond ~400 pieces)
@@ -98,13 +109,15 @@ muzzle/
 - Preset puzzle URLs are all images; no video presets yet
 
 ## Testing
+
 ```bash
 python3 -m http.server 8000   # serve from project root
 # Open http://localhost:8000 in browser
 ```
 
 ## Key Bug Fixes Applied
+
 1. Chunk merge used dx/2 instead of full dx — caused compounding misalignment (FIXED)
 2. isComplete() required rotation===0 — prevented win when rotation enabled (FIXED: any rotation)
 3. Right-click rotation unreachable in HOLDING_CLICK state (FIXED: check before early return)
-4. Selection rectangle didn't trigger re-render during drag (FIXED: set _needsRender)
+4. Selection rectangle didn't trigger re-render during drag (FIXED: set \_needsRender)

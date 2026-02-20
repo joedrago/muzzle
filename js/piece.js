@@ -360,37 +360,118 @@ export class ChunkManager {
 
     // ── Cleanup (reorganize) ──────────────────────────
 
-    cleanup() {
+    _getChunkWorldSize(chunk) {
         const pw = this.puzzleData.pieceW
-        const spacing = pw * 1.5
+        const ph = this.puzzleData.pieceH
+        let minCol = Infinity,
+            maxCol = -Infinity,
+            minRow = Infinity,
+            maxRow = -Infinity
+        for (const pieceId of chunk.pieces) {
+            const piece = this.pieces[pieceId]
+            minCol = Math.min(minCol, piece.col)
+            maxCol = Math.max(maxCol, piece.col)
+            minRow = Math.min(minRow, piece.row)
+            maxRow = Math.max(maxRow, piece.row)
+        }
+        const localW = (maxCol - minCol + 1) * pw
+        const localH = (maxRow - minRow + 1) * ph
+        const rot = chunk.rotation % 360
+        return {
+            w: rot === 90 || rot === 270 ? localH : localW,
+            h: rot === 90 || rot === 270 ? localW : localH
+        }
+    }
 
-        // Sort chunks: largest first, then by ID
+    cleanup(viewW, viewH, camX, camY) {
+        const pw = this.puzzleData.pieceW
+        const minMargin = pw * 1.5 // enough to clear tab overhang on both sides
+
         const sorted = Array.from(this.chunks.values()).sort((a, b) => {
-            const sizeA = a.pieces.size
-            const sizeB = b.pieces.size
-            if (sizeB !== sizeA) return sizeB - sizeA
+            if (b.pieces.size !== a.pieces.size) return b.pieces.size - a.pieces.size
             return a.id - b.id
         })
 
-        // Arrange in a grid
-        const gridCols = Math.ceil(Math.sqrt(sorted.length))
-        let idx = 0
+        const n = sorted.length
+        if (n === 0) return
 
-        for (const chunk of sorted) {
-            const gridCol = idx % gridCols
-            const gridRow = Math.floor(idx / gridCols)
+        // Compute bounding size of each chunk accounting for rotation
+        const sizes = sorted.map((chunk) => this._getChunkWorldSize(chunk))
+        const maxChunkW = Math.max(...sizes.map((s) => s.w))
+        const maxChunkH = Math.max(...sizes.map((s) => s.h))
 
-            // Estimate chunk bounding box (rough: use piece count)
-            const chunkPieceCount = chunk.pieces.size
-            const estSize = Math.ceil(Math.sqrt(chunkPieceCount))
-            const cellSize = Math.max(estSize * pw + spacing, pw * 3)
+        // Grid dimensions: match the viewport aspect ratio
+        const usableW = viewW * 0.9
+        const usableH = viewH * 0.9
+        const aspect = usableW / usableH
+        let cols = Math.max(1, Math.round(Math.sqrt(n * aspect)))
+        let rows = Math.ceil(n / cols)
 
-            const x = gridCol * cellSize - (gridCols * cellSize) / 2
-            const y = gridRow * cellSize - (Math.ceil(sorted.length / gridCols) * cellSize) / 2
+        // Cell size: use viewport-based or minimum margin, whichever is larger
+        const cellW = Math.max(maxChunkW + minMargin, usableW / cols)
+        const cellH = Math.max(maxChunkH + minMargin, usableH / rows)
 
-            chunk.setPosition(x, y)
-            idx++
+        // Center the grid on the current camera position
+        const totalW = cols * cellW
+        const totalH = rows * cellH
+        const startX = camX - totalW / 2
+        const startY = camY - totalH / 2
+
+        for (let i = 0; i < n; i++) {
+            const chunk = sorted[i]
+            const gc = i % cols
+            const gr = Math.floor(i / cols)
+
+            const cellCenterX = startX + (gc + 0.5) * cellW
+            const cellCenterY = startY + (gr + 0.5) * cellH
+
+            // Place chunk so its visual center lands on the cell center
+            const localCenter = this._getChunkLocalCenter(chunk)
+            const rad = degToRad(chunk.rotation)
+            const rotatedCenter = chunk.rotation === 0 ? localCenter : vec2.rotate(localCenter, rad)
+
+            chunk.setPosition(cellCenterX - rotatedCenter[0], cellCenterY - rotatedCenter[1])
         }
+    }
+
+    // ── Rotation around center ──────────────────────────
+
+    _getChunkLocalCenter(chunk) {
+        const pw = this.puzzleData.pieceW
+        const ph = this.puzzleData.pieceH
+        let cx = 0,
+            cy = 0,
+            n = 0
+        for (const pieceId of chunk.pieces) {
+            const piece = this.pieces[pieceId]
+            cx += piece.col * pw + pw / 2
+            cy += piece.row * ph + ph / 2
+            n++
+        }
+        return n > 0 ? [cx / n, cy / n] : [0, 0]
+    }
+
+    getChunkWorldCenter(chunkId) {
+        const chunk = this.chunks.get(chunkId)
+        if (!chunk) return [0, 0]
+        return mat3.transformPoint(chunk.worldMatrix, this._getChunkLocalCenter(chunk))
+    }
+
+    rotateChunkAroundCenter(chunkId) {
+        const chunk = this.chunks.get(chunkId)
+        if (!chunk) return
+
+        const localCenter = this._getChunkLocalCenter(chunk)
+        const worldCenterBefore = mat3.transformPoint(chunk.worldMatrix, localCenter)
+
+        chunk.setRotation(chunk.rotation + 90)
+
+        const worldCenterAfter = mat3.transformPoint(chunk.worldMatrix, localCenter)
+
+        chunk.setPosition(
+            chunk.x + worldCenterBefore[0] - worldCenterAfter[0],
+            chunk.y + worldCenterBefore[1] - worldCenterAfter[1]
+        )
     }
 
     // Move chunk to top of draw order

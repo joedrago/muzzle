@@ -64,6 +64,23 @@ export function generateEdges(cols, rows, rng) {
 }
 
 // ── Edge random parameters ────────────────────────────
+// Draradech-style: t controls tab size, a-e are per-edge jitter
+
+function randomEdgeParams(rng) {
+    return {
+        t: 0.07 + rng() * 0.04, // 0.07–0.11 tab size factor (controls all proportions)
+        a: (rng() - 0.5) * 0.04, // left shoulder jitter
+        b: (rng() - 0.5) * 0.04, // horizontal shift of tab center
+        c: (rng() - 0.5) * 0.02, // vertical shift of tab center
+        d: (rng() - 0.5) * 0.02, // indent variation at neck
+        e: (rng() - 0.5) * 0.04 // right shoulder jitter
+    }
+}
+
+// For edges with reversed transforms (bottom, left), mirror the params
+function reverseParams(p) {
+    return { t: p.t, a: p.e, b: -p.b, c: p.c, d: -p.d, e: p.a }
+}
 
 export function generateEdgeParams(cols, rows, rng) {
     // Random params per edge for unique tab shapes
@@ -71,12 +88,7 @@ export function generateEdgeParams(cols, rows, rng) {
     for (let r = 0; r < rows - 1; r++) {
         hParams[r] = []
         for (let c = 0; c < cols; c++) {
-            hParams[r][c] = {
-                tabWidth: 0.3 + rng() * 0.15, // 0.30–0.45
-                tabHeight: 0.28 + rng() * 0.12, // 0.28–0.40
-                asymmetry: (rng() - 0.5) * 0.08, // slight left/right shift
-                neckWidth: 0.18 + rng() * 0.08 // 0.18–0.26
-            }
+            hParams[r][c] = randomEdgeParams(rng)
         }
     }
 
@@ -84,78 +96,49 @@ export function generateEdgeParams(cols, rows, rng) {
     for (let r = 0; r < rows; r++) {
         vParams[r] = []
         for (let c = 0; c < cols - 1; c++) {
-            vParams[r][c] = {
-                tabWidth: 0.3 + rng() * 0.15,
-                tabHeight: 0.28 + rng() * 0.12,
-                asymmetry: (rng() - 0.5) * 0.08,
-                neckWidth: 0.18 + rng() * 0.08
-            }
+            vParams[r][c] = randomEdgeParams(rng)
         }
     }
 
     return { hParams, vParams }
 }
 
-// ── Bezier tab outline ────────────────────────────────
+// ── Bezier tab outline (Draradech-style) ─────────────
 
 // Generate points along an edge from (0,0) to (edgeLen, 0)
-// direction: 1 for POS (tab goes up/outward in +Y), -1 for NEG (blank)
+// direction: 1 for POS (tab goes in +Y), -1 for NEG (blank goes in -Y)
+// Uses 10 control points forming 3 cubic bezier segments
 function generateEdgePoints(edgeLen, direction, params) {
-    const { tabWidth, tabHeight, asymmetry, neckWidth } = params
+    const { t, a, b, c, d, e } = params
+    const f = direction
 
-    const tw = tabWidth * edgeLen
-    const th = tabHeight * edgeLen * direction
-    const nw = neckWidth * edgeLen
-    const asym = asymmetry * edgeLen
+    // Scale jitter params to edge length
+    const ts = t * edgeLen
+    const as = a * edgeLen
+    const bs = b * edgeLen
+    const cs = c * edgeLen
+    const ds = d * edgeLen
+    const es = e * edgeLen
+    const half = edgeLen / 2
 
-    const mid = edgeLen / 2 + asym
-    const halfTab = tw / 2
-    const halfNeck = nw / 2
+    // 10 control points: p0-p9
+    const p0 = [0, 0]
+    const p1 = [half * 0.4, f * as]
+    const p2 = [half + bs + ds, f * (-ts + cs)]
+    const p3 = [half - ts + bs, f * (ts + cs)]
+    const p4 = [half - 2 * ts + bs - ds, f * (3 * ts + cs)]
+    const p5 = [half + 2 * ts + bs - ds, f * (3 * ts + cs)]
+    const p6 = [half + ts + bs, f * (ts + cs)]
+    const p7 = [half + bs + ds, f * (-ts + cs)]
+    const p8 = [edgeLen - half * 0.4, f * es]
+    const p9 = [edgeLen, 0]
 
-    const startTab = mid - halfTab
-    const endTab = mid + halfTab
-    const startNeck = mid - halfNeck
-    const endNeck = mid + halfNeck
+    // 3 cubic bezier segments, skip duplicate junction points
+    const seg1 = flattenCubicBezier(p0, p1, p2, p3, 0.5)
+    const seg2 = flattenCubicBezier(p3, p4, p5, p6, 0.5)
+    const seg3 = flattenCubicBezier(p6, p7, p8, p9, 0.5)
 
-    const points = []
-
-    // Straight segment to tab start
-    points.push([0, 0])
-
-    // Bezier curve into the tab
-    // Segment 1: approach to neck
-    const seg1 = flattenCubicBezier(
-        [startTab, 0],
-        [startTab + (startNeck - startTab) * 0.3, 0],
-        [startNeck - (startNeck - startTab) * 0.1, th * 0.4],
-        [startNeck, th * 0.6],
-        0.8
-    )
-    // Segment 2: neck to top of tab
-    const seg2 = flattenCubicBezier(
-        [startNeck, th * 0.6],
-        [startNeck - halfNeck * 0.3, th],
-        [endNeck + halfNeck * 0.3, th],
-        [endNeck, th * 0.6],
-        0.8
-    )
-    // Segment 3: tab back down
-    const seg3 = flattenCubicBezier(
-        [endNeck, th * 0.6],
-        [endNeck + (endTab - endNeck) * 0.1, th * 0.4],
-        [endTab - (endTab - endNeck) * 0.3, 0],
-        [endTab, 0],
-        0.8
-    )
-
-    points.push(...seg1)
-    points.push(...seg2)
-    points.push(...seg3)
-
-    // Straight to end
-    points.push([edgeLen, 0])
-
-    return points
+    return [...seg1, ...seg2.slice(1), ...seg3.slice(1)]
 }
 
 // ── Piece outline generation ──────────────────────────
@@ -173,12 +156,11 @@ export function generatePieceOutline(col, row, cols, rows, edges, edgeParams, pi
             outline.push([0, 0])
             outline.push([pieceW, 0])
         } else {
-            // From top piece's perspective, this was the bottom edge
-            // Our top = neighbor's bottom, so we invert
-            const dir = -edgeType // invert because we see it from the other side
-            const params = hParams[row - 1][col]
-            const pts = generateEdgePoints(pieceW, dir, params)
-            // Points go left→right along top (y stays near 0)
+            // Top edge has no transform, so +Y goes INTO the piece (blank).
+            // If stored edge is POS (bottom piece has tab going out), we need
+            // direction=+1 here to make the blank go into our piece body.
+            // reverseParams mirrors X to match the bottom edge's X-reversal.
+            const pts = generateEdgePoints(pieceW, edgeType, reverseParams(hParams[row - 1][col]))
             outline.push(...pts)
         }
     }
@@ -224,11 +206,10 @@ export function generatePieceOutline(col, row, cols, rows, edges, edgeParams, pi
             outline.push([0, pieceH])
             outline.push([0, 0])
         } else {
-            // Invert because we're on the other side
+            // This edge was defined from the left neighbor's right perspective.
+            // The left transform reverses X, so we need reverseParams to match.
             const dir = -edgeType
-            const pts = generateEdgePoints(pieceH, dir, vParams[row][col - 1])
-            // Edge goes from (0, pieceH) to (0, 0)
-            // Transform: (x, y) in edge space → (-y, pieceH - x) in piece space
+            const pts = generateEdgePoints(pieceH, dir, reverseParams(vParams[row][col - 1]))
             for (const p of pts) {
                 outline.push([-p[1], pieceH - p[0]])
             }
@@ -305,6 +286,14 @@ export function generatePuzzle(cols, rows, seed, renderer) {
             const vbo = renderer.createVBO(vertData)
             const ibo = renderer.createIBO(indexData)
 
+            // Outline VBO for border rendering (just x,y positions)
+            const outlineData = new Float32Array(outline.length * 2)
+            for (let i = 0; i < outline.length; i++) {
+                outlineData[i * 2] = outline[i][0]
+                outlineData[i * 2 + 1] = outline[i][1]
+            }
+            const outlineVBO = renderer.createVBO(outlineData)
+
             pieces.push({
                 id,
                 col: c,
@@ -313,6 +302,8 @@ export function generatePuzzle(cols, rows, seed, renderer) {
                 vbo,
                 ibo,
                 triCount,
+                outlineVBO,
+                outlineVertCount: outline.length,
                 chunkId: id // initially each piece is its own chunk
             })
         }

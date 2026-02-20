@@ -1,4 +1,4 @@
-import { vec2 } from "./math-utils.js"
+import { vec2, degToRad } from "./math-utils.js"
 
 // Input states
 const IDLE = "IDLE"
@@ -254,15 +254,50 @@ export class InputManager {
     // ── Rotation ──────────────────────────────────────
 
     _rotateHeld() {
+        const [wx, wy] = this.renderer.screenToWorld(...this.mouseScreen)
+
         if (this.heldChunkIds) {
-            for (const cid of this.heldChunkIds) {
-                const chunk = this.cm.chunks.get(cid)
-                if (chunk) chunk.setRotation(chunk.rotation + 90)
+            // Multi-chunk: rotate all around their collective center
+            const centers = this.heldChunkIds.map((cid) => this.cm.getChunkWorldCenter(cid))
+            let gcx = 0,
+                gcy = 0
+            for (const c of centers) {
+                gcx += c[0]
+                gcy += c[1]
             }
+            gcx /= centers.length
+            gcy /= centers.length
+
+            const rad = degToRad(90)
+            for (let i = 0; i < this.heldChunkIds.length; i++) {
+                const cid = this.heldChunkIds[i]
+                const chunk = this.cm.chunks.get(cid)
+                if (!chunk) continue
+
+                // Rotate chunk around its own visual center
+                this.cm.rotateChunkAroundCenter(cid)
+
+                // Orbit the chunk's center around the group center
+                const dx = centers[i][0] - gcx
+                const dy = centers[i][1] - gcy
+                const rotated = vec2.rotate([dx, dy], rad)
+                const newCenter = [gcx + rotated[0], gcy + rotated[1]]
+                const currentCenter = this.cm.getChunkWorldCenter(cid)
+                chunk.setPosition(chunk.x + newCenter[0] - currentCenter[0], chunk.y + newCenter[1] - currentCenter[1])
+            }
+
+            // Update offsets to match new positions
+            this.heldOffsets = this.heldChunkIds.map((cid) => {
+                const chunk = this.cm.chunks.get(cid)
+                return [chunk.x - wx, chunk.y - wy]
+            })
         } else if (this.heldChunkId !== null) {
+            this.cm.rotateChunkAroundCenter(this.heldChunkId)
+
+            // Update offset to match new position
             const chunk = this.cm.chunks.get(this.heldChunkId)
             if (chunk) {
-                chunk.setRotation(chunk.rotation + 90)
+                this.holdOffset = [chunk.x - wx, chunk.y - wy]
             }
         }
         this.app.markDirty()

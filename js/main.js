@@ -260,13 +260,15 @@ class App {
         // Draw non-held chunks first, then held chunks on top
         for (const chunk of this.cm.chunks.values()) {
             if (isHeld(chunk.id)) continue
-            this._drawChunk(chunk, texture, pw, ph, 1.0)
+            this._drawChunk(chunk, texture, pw, ph, 1.0, 0.0)
         }
 
         // Draw held chunks on top with slight transparency
+        // Multi-selected chunks get a blue highlight tint
+        const multiHighlight = heldIds && heldIds.length > 0 ? 0.2 : 0.0
         for (const chunk of this.cm.chunks.values()) {
             if (!isHeld(chunk.id)) continue
-            this._drawChunk(chunk, texture, pw, ph, 0.85)
+            this._drawChunk(chunk, texture, pw, ph, 0.85, multiHighlight)
         }
 
         // Selection rectangle
@@ -282,11 +284,11 @@ class App {
             const puzzleW = this.puzzleData.puzzleWidth
             const puzzleH = this.puzzleData.puzzleHeight
             // Position at origin (0,0 is where the solved puzzle would be)
-            r.drawSolutionOverlay(texture, 0, 0, puzzleW, puzzleH, 0.35)
+            r.drawSolutionOverlay(texture, 0, 0, puzzleW, puzzleH, 0.5)
         }
     }
 
-    _drawChunk(chunk, texture, pw, ph, alpha) {
+    _drawChunk(chunk, texture, pw, ph, alpha, highlight) {
         const worldMatrix = chunk.worldMatrix
 
         for (const pieceId of chunk.pieces) {
@@ -300,7 +302,8 @@ class App {
             const pieceTranslate = mat3.translate(pieceOffsetX, pieceOffsetY)
             const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
 
-            this.renderer.drawPiece(piece.vbo, piece.ibo, piece.triCount, modelMatrix, texture, alpha)
+            this.renderer.drawPiece(piece.vbo, piece.ibo, piece.triCount, modelMatrix, texture, alpha, highlight)
+            this.renderer.drawPieceOutline(piece.outlineVBO, piece.outlineVertCount, modelMatrix, [0.9, 0.9, 0.9, 0.5])
         }
     }
 
@@ -365,10 +368,10 @@ class App {
     }
 
     cleanup() {
-        this.cm.cleanup()
-        // Center camera on the arrangement
-        this.renderer.camera.x = 0
-        this.renderer.camera.y = 0
+        const cam = this.renderer.camera
+        const viewW = this.canvas.width / cam.zoom
+        const viewH = this.canvas.height / cam.zoom
+        this.cm.cleanup(viewW, viewH, cam.x, cam.y)
         this._needsRender = true
         this.state.markDirty()
     }

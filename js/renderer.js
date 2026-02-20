@@ -21,9 +21,11 @@ const PIECE_FS = `
   varying vec2 v_uv;
   uniform sampler2D u_texture;
   uniform float u_alpha;
+  uniform float u_highlight;
   void main() {
     vec4 color = texture2D(u_texture, v_uv);
-    gl_FragColor = vec4(color.rgb, color.a * u_alpha);
+    vec3 tinted = mix(color.rgb, vec3(0.4, 0.6, 1.0), u_highlight);
+    gl_FragColor = vec4(tinted, color.a * u_alpha);
   }
 `
 
@@ -97,7 +99,8 @@ export class Renderer {
             u_camera: gl.getUniformLocation(this.pieceProgram, "u_camera"),
             u_model: gl.getUniformLocation(this.pieceProgram, "u_model"),
             u_texture: gl.getUniformLocation(this.pieceProgram, "u_texture"),
-            u_alpha: gl.getUniformLocation(this.pieceProgram, "u_alpha")
+            u_alpha: gl.getUniformLocation(this.pieceProgram, "u_alpha"),
+            u_highlight: gl.getUniformLocation(this.pieceProgram, "u_highlight")
         }
 
         // Flat program locations
@@ -231,7 +234,7 @@ export class Renderer {
         gl.clear(gl.COLOR_BUFFER_BIT)
     }
 
-    drawPiece(vbo, ibo, triCount, modelMatrix, texture, alpha = 1.0) {
+    drawPiece(vbo, ibo, triCount, modelMatrix, texture, alpha = 1.0, highlight = 0.0) {
         const gl = this.gl
         const locs = this.pieceLocs
         const cam = this.getCameraMatrix()
@@ -242,6 +245,7 @@ export class Renderer {
         gl.uniformMatrix3fv(locs.u_camera, false, cam)
         gl.uniformMatrix3fv(locs.u_model, false, modelMatrix)
         gl.uniform1f(locs.u_alpha, alpha)
+        gl.uniform1f(locs.u_highlight, highlight)
 
         // Texture
         gl.activeTexture(gl.TEXTURE0)
@@ -261,6 +265,26 @@ export class Renderer {
 
         gl.disableVertexAttribArray(locs.a_position)
         gl.disableVertexAttribArray(locs.a_uv)
+    }
+
+    drawPieceOutline(outlineVBO, vertexCount, modelMatrix, color) {
+        const gl = this.gl
+        const locs = this.flatLocs
+        const cam = this.getCameraMatrix()
+
+        gl.useProgram(this.flatProgram)
+        gl.uniformMatrix3fv(locs.u_camera, false, cam)
+        gl.uniformMatrix3fv(locs.u_model, false, modelMatrix)
+        gl.uniform4fv(locs.u_color, color)
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, outlineVBO)
+        gl.enableVertexAttribArray(locs.a_position)
+        gl.vertexAttribPointer(locs.a_position, 2, gl.FLOAT, false, 0, 0)
+
+        gl.lineWidth(2)
+        gl.drawArrays(gl.LINE_LOOP, 0, vertexCount)
+        gl.lineWidth(1)
+        gl.disableVertexAttribArray(locs.a_position)
     }
 
     drawRect(x, y, w, h, color) {
@@ -333,6 +357,7 @@ export class Renderer {
         gl.uniformMatrix3fv(locs.u_camera, false, cam)
         gl.uniformMatrix3fv(locs.u_model, false, mat3.identity())
         gl.uniform1f(locs.u_alpha, alpha)
+        gl.uniform1f(locs.u_highlight, 0.0)
 
         gl.activeTexture(gl.TEXTURE0)
         gl.bindTexture(gl.TEXTURE_2D, texture)
