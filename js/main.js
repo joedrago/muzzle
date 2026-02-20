@@ -283,8 +283,8 @@ class App {
         if (this.showSolution) {
             const puzzleW = this.puzzleData.puzzleWidth
             const puzzleH = this.puzzleData.puzzleHeight
-            // Position at origin (0,0 is where the solved puzzle would be)
-            r.drawSolutionOverlay(texture, 0, 0, puzzleW, puzzleH, 0.5)
+            // Center the overlay at the origin so it's visible after cleanup or at start
+            r.drawSolutionOverlay(texture, -puzzleW / 2, -puzzleH / 2, puzzleW, puzzleH, 0.5)
         }
     }
 
@@ -369,9 +369,15 @@ class App {
 
     cleanup() {
         const cam = this.renderer.camera
-        const viewW = this.canvas.width / cam.zoom
-        const viewH = this.canvas.height / cam.zoom
-        this.cm.cleanup(viewW, viewH, cam.x, cam.y)
+        const aspect = this.canvas.width / this.canvas.height
+        const bounds = this.cm.cleanup(aspect)
+        if (bounds) {
+            // Center camera on the layout and zoom to fit
+            cam.x = 0
+            cam.y = 0
+            const pad = 0.9 // 10% padding
+            cam.zoom = Math.min((this.canvas.width * pad) / bounds.totalW, (this.canvas.height * pad) / bounds.totalH)
+        }
         this._needsRender = true
         this.state.markDirty()
     }

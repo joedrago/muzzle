@@ -383,39 +383,49 @@ export class ChunkManager {
         }
     }
 
-    cleanup(viewW, viewH, camX, camY) {
+    cleanup(canvasAspect) {
         const pw = this.puzzleData.pieceW
         const minMargin = pw * 1.5 // enough to clear tab overhang on both sides
 
-        const sorted = Array.from(this.chunks.values()).sort((a, b) => {
-            if (b.pieces.size !== a.pieces.size) return b.pieces.size - a.pieces.size
-            return a.id - b.id
-        })
+        const chunkArray = Array.from(this.chunks.values())
+        const n = chunkArray.length
+        if (n === 0) return null
 
-        const n = sorted.length
-        if (n === 0) return
+        // Compute world center for each chunk
+        const chunkCenters = chunkArray.map((chunk) => ({
+            chunk,
+            center: this.getChunkWorldCenter(chunk.id)
+        }))
 
         // Compute bounding size of each chunk accounting for rotation
-        const sizes = sorted.map((chunk) => this._getChunkWorldSize(chunk))
+        const sizes = chunkArray.map((chunk) => this._getChunkWorldSize(chunk))
         const maxChunkW = Math.max(...sizes.map((s) => s.w))
         const maxChunkH = Math.max(...sizes.map((s) => s.h))
 
-        // Grid dimensions: match the viewport aspect ratio
-        const usableW = viewW * 0.9
-        const usableH = viewH * 0.9
-        const aspect = usableW / usableH
-        let cols = Math.max(1, Math.round(Math.sqrt(n * aspect)))
-        let rows = Math.ceil(n / cols)
+        // Grid dimensions: match the canvas aspect ratio
+        const cols = Math.max(1, Math.round(Math.sqrt(n * canvasAspect)))
+        const rows = Math.ceil(n / cols)
 
-        // Cell size: use viewport-based or minimum margin, whichever is larger
-        const cellW = Math.max(maxChunkW + minMargin, usableW / cols)
-        const cellH = Math.max(maxChunkH + minMargin, usableH / rows)
+        // Sort spatially: by Y position first to assign to rows, then by X within each row
+        chunkCenters.sort((a, b) => a.center[1] - b.center[1])
+        const sorted = []
+        for (let r = 0; r < rows; r++) {
+            const start = r * cols
+            const end = Math.min(start + cols, n)
+            const rowChunks = chunkCenters.slice(start, end)
+            rowChunks.sort((a, b) => a.center[0] - b.center[0])
+            sorted.push(...rowChunks.map((cc) => cc.chunk))
+        }
 
-        // Center the grid on the current camera position
+        // Cell size: minimum needed to fit chunks with margin
+        const cellW = maxChunkW + minMargin
+        const cellH = maxChunkH + minMargin
+
+        // Center the grid on the origin
         const totalW = cols * cellW
         const totalH = rows * cellH
-        const startX = camX - totalW / 2
-        const startY = camY - totalH / 2
+        const startX = -totalW / 2
+        const startY = -totalH / 2
 
         for (let i = 0; i < n; i++) {
             const chunk = sorted[i]
@@ -432,6 +442,8 @@ export class ChunkManager {
 
             chunk.setPosition(cellCenterX - rotatedCenter[0], cellCenterY - rotatedCenter[1])
         }
+
+        return { totalW, totalH }
     }
 
     // ── Rotation around center ──────────────────────────

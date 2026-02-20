@@ -281,9 +281,7 @@ export class Renderer {
         gl.enableVertexAttribArray(locs.a_position)
         gl.vertexAttribPointer(locs.a_position, 2, gl.FLOAT, false, 0, 0)
 
-        gl.lineWidth(2)
-        gl.drawArrays(gl.LINE_LOOP, 0, vertexCount)
-        gl.lineWidth(1)
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
         gl.disableVertexAttribArray(locs.a_position)
     }
 

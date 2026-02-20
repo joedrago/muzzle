@@ -134,9 +134,9 @@ function generateEdgePoints(edgeLen, direction, params) {
     const p9 = [edgeLen, 0]
 
     // 3 cubic bezier segments, skip duplicate junction points
-    const seg1 = flattenCubicBezier(p0, p1, p2, p3, 0.5)
-    const seg2 = flattenCubicBezier(p3, p4, p5, p6, 0.5)
-    const seg3 = flattenCubicBezier(p6, p7, p8, p9, 0.5)
+    const seg1 = flattenCubicBezier(p0, p1, p2, p3, 0.15)
+    const seg2 = flattenCubicBezier(p3, p4, p5, p6, 0.15)
+    const seg3 = flattenCubicBezier(p6, p7, p8, p9, 0.15)
 
     return [...seg1, ...seg2.slice(1), ...seg3.slice(1)]
 }
@@ -264,6 +264,58 @@ export function buildPieceMesh(outline, indices, col, row, cols, rows, pieceW, p
     return { vertData, indexData, triCount: indices.length / 3 }
 }
 
+// ── Outline strip generation (triangle strip for thick borders) ──
+
+const OUTLINE_WIDTH = 1.2 // world units (piece size = 100)
+
+function buildOutlineStrip(outline) {
+    const n = outline.length
+    const halfW = OUTLINE_WIDTH / 2
+    const verts = []
+
+    for (let i = 0; i < n; i++) {
+        const prev = outline[(i - 1 + n) % n]
+        const curr = outline[i]
+        const next = outline[(i + 1) % n]
+
+        // Edge directions
+        const dx1 = curr[0] - prev[0],
+            dy1 = curr[1] - prev[1]
+        const dx2 = next[0] - curr[0],
+            dy2 = next[1] - curr[1]
+
+        // Normals (perpendicular)
+        const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1) || 1
+        const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1
+        const nx1 = -dy1 / len1,
+            ny1 = dx1 / len1
+        const nx2 = -dy2 / len2,
+            ny2 = dx2 / len2
+
+        // Average normal (miter join)
+        let nx = (nx1 + nx2) / 2
+        let ny = (ny1 + ny2) / 2
+        const nlen = Math.sqrt(nx * nx + ny * ny) || 1
+        nx /= nlen
+        ny /= nlen
+
+        // Miter scale to maintain consistent width at corners
+        const dot = nx * nx1 + ny * ny1
+        const miterScale = dot > 0.15 ? 1 / dot : 1 / 0.15
+        const offset = halfW * Math.min(miterScale, 3)
+
+        // Inner and outer vertices for the strip
+        verts.push(curr[0] - nx * offset, curr[1] - ny * offset)
+        verts.push(curr[0] + nx * offset, curr[1] + ny * offset)
+    }
+
+    // Close the strip by repeating first two vertices
+    verts.push(verts[0], verts[1])
+    verts.push(verts[2], verts[3])
+
+    return new Float32Array(verts)
+}
+
 // ── Full puzzle generation ────────────────────────────
 
 export function generatePuzzle(cols, rows, seed, renderer) {
@@ -286,13 +338,10 @@ export function generatePuzzle(cols, rows, seed, renderer) {
             const vbo = renderer.createVBO(vertData)
             const ibo = renderer.createIBO(indexData)
 
-            // Outline VBO for border rendering (just x,y positions)
-            const outlineData = new Float32Array(outline.length * 2)
-            for (let i = 0; i < outline.length; i++) {
-                outlineData[i * 2] = outline[i][0]
-                outlineData[i * 2 + 1] = outline[i][1]
-            }
-            const outlineVBO = renderer.createVBO(outlineData)
+            // Outline triangle strip for thick border rendering
+            const outlineStrip = buildOutlineStrip(outline)
+            const outlineVBO = renderer.createVBO(outlineStrip)
+            const outlineVertCount = outlineStrip.length / 2
 
             pieces.push({
                 id,
@@ -303,7 +352,7 @@ export function generatePuzzle(cols, rows, seed, renderer) {
                 ibo,
                 triCount,
                 outlineVBO,
-                outlineVertCount: outline.length,
+                outlineVertCount,
                 chunkId: id // initially each piece is its own chunk
             })
         }

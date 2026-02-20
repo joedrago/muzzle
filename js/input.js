@@ -359,10 +359,14 @@ export class InputManager {
                 break
             case "o":
             case "s":
+            case " ":
                 this.app.toggleSolution()
                 break
             case "m":
                 this.app.toggleMute()
+                break
+            case "c":
+                this.app.cleanup()
                 break
             case "h":
             case "?":
