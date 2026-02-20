@@ -366,7 +366,8 @@ class App {
             const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
 
             this.renderer.drawPiece(piece.vbo, piece.ibo, piece.triCount, modelMatrix, texture, alpha, highlight)
-            this.renderer.drawPieceOutline(piece.outlineVBO, piece.outlineVertCount, modelMatrix, [0.9, 0.9, 0.9, 0.5])
+            const outlineAlpha = this.completed ? 0.125 : 0.5
+            this.renderer.drawPieceOutline(piece.outlineVBO, piece.outlineVertCount, modelMatrix, [0.9, 0.9, 0.9, outlineAlpha])
         }
     }
 
@@ -380,6 +381,7 @@ class App {
     onPieceSnapped() {
         if (this.cm.isComplete() && !this.completed) {
             this.completed = true
+            this.showSolution = false
             this.ui.showCelebration()
             this.state.markDirty()
         }
