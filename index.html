@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Muzzle - Jigsaw Puzzle</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <canvas id="puzzle-canvas"></canvas>
+        <video id="puzzle-video" loop playsinline style="display: none"></video>
+
+        <div id="toolbar">
+            <div id="toolbar-left">
+                <button id="btn-new" title="New Puzzle">New Puzzle</button>
+                <button id="btn-solution" title="Toggle Solution Overlay (O)">Solution</button>
+                <button id="btn-cleanup" title="Reorganize Pieces">Cleanup</button>
+                <button id="btn-help" title="Help (H)">Help</button>
+            </div>
+            <div id="toolbar-right">
+                <div id="audio-controls" style="display: none">
+                    <button id="btn-mute" title="Toggle Mute (M)">Mute</button>
+                    <input type="range" id="volume-slider" min="0" max="100" value="50" title="Volume" />
+                </div>
+                <button id="btn-fullscreen" title="Toggle Fullscreen (F)">Fullscreen</button>
+                <span id="badge-complete" style="display: none">Complete!</span>
+            </div>
+        </div>
+
+        <div id="dialog-backdrop" class="hidden"></div>
+
+        <div id="dialog-puzzle-select" class="dialog hidden">
+            <h2>Select a Puzzle</h2>
+            <div id="preset-list"></div>
+            <div id="custom-url-section">
+                <label> <input type="radio" name="puzzle-source" value="custom" /> Custom URL: </label>
+                <input type="text" id="custom-url-input" placeholder="https://example.com/image.jpg or video.mp4" disabled />
+            </div>
+            <div id="puzzle-options">
+                <label
+                    >Pieces:
+                    <select id="piece-count-select">
+                        <option value="24">24</option>
+                        <option value="48">48</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="400">400</option>
+                    </select>
+                </label>
+                <label> <input type="checkbox" id="rotation-checkbox" checked /> Shuffle rotation </label>
+            </div>
+            <div class="dialog-buttons">
+                <button id="btn-start-puzzle">Start</button>
+                <button id="btn-cancel-puzzle">Cancel</button>
+            </div>
+        </div>
+
+        <div id="dialog-confirm" class="dialog hidden">
+            <p id="confirm-message"></p>
+            <div class="dialog-buttons">
+                <button id="btn-confirm-yes">Yes</button>
+                <button id="btn-confirm-no">No</button>
+            </div>
+        </div>
+
+        <div id="dialog-help" class="dialog hidden">
+            <h2>Controls</h2>
+            <table>
+                <tr>
+                    <td>Left click</td>
+                    <td>Pick up / drop piece</td>
+                </tr>
+                <tr>
+                    <td>Left drag</td>
+                    <td>Drag piece</td>
+                </tr>
+                <tr>
+                    <td>Right click (while holding)</td>
+                    <td>Rotate 90&deg; CW</td>
+                </tr>
+                <tr>
+                    <td>Right drag (on background)</td>
+                    <td>Pan camera</td>
+                </tr>
+                <tr>
+                    <td>Left drag (on background)</td>
+                    <td>Selection rectangle</td>
+                </tr>
+                <tr>
+                    <td>Scroll wheel</td>
+                    <td>Zoom in/out</td>
+                </tr>
+                <tr>
+                    <td><kbd>R</kbd></td>
+                    <td>Rotate held piece</td>
+                </tr>
+                <tr>
+                    <td><kbd>O</kbd> / <kbd>S</kbd></td>
+                    <td>Toggle solution overlay</td>
+                </tr>
+                <tr>
+                    <td><kbd>M</kbd></td>
+                    <td>Toggle mute</td>
+                </tr>
+                <tr>
+                    <td><kbd>F</kbd></td>
+                    <td>Toggle fullscreen</td>
+                </tr>
+                <tr>
+                    <td><kbd>H</kbd> / <kbd>?</kbd></td>
+                    <td>Toggle help</td>
+                </tr>
+                <tr>
+                    <td><kbd>Esc</kbd></td>
+                    <td>Cancel / close dialog</td>
+                </tr>
+            </table>
+            <div class="dialog-buttons">
+                <button id="btn-close-help">Close</button>
+            </div>
+        </div>
+
+        <div id="celebration-overlay" class="hidden"></div>
+        <div id="video-play-overlay" class="hidden">
+            <button id="btn-play-video">Click to Start Video</button>
+        </div>
+
+        <script type="module" src="js/main.js"></script>
+    </body>
+</html>

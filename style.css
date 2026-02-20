@@ -1,0 +1,356 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+#puzzle-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: default;
+}
+
+/* Toolbar */
+#toolbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    background: rgba(20, 20, 40, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#toolbar-left,
+#toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#toolbar button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e0e0e0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+#toolbar button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#toolbar button:active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+#audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#volume-slider {
+    width: 80px;
+    accent-color: #6c63ff;
+}
+
+#badge-complete {
+    background: #4caf50;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Dialogs */
+#dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+}
+
+.dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #2a2a4a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 24px;
+    z-index: 300;
+    min-width: 360px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.dialog h2 {
+    margin-bottom: 16px;
+    font-size: 20px;
+    color: #fff;
+}
+
+.dialog-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.dialog-buttons button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.dialog-buttons button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#btn-start-puzzle {
+    background: #6c63ff !important;
+    border-color: #6c63ff !important;
+    color: white !important;
+}
+
+#btn-start-puzzle:hover {
+    background: #5a52e0 !important;
+}
+
+/* Puzzle selection */
+#preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.preset-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.preset-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.preset-item input[type="radio"] {
+    accent-color: #6c63ff;
+}
+
+.preset-item label {
+    cursor: pointer;
+    flex: 1;
+}
+
+.preset-type {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
+}
+
+.preset-type.video {
+    background: rgba(108, 99, 255, 0.2);
+    color: #a9a4ff;
+}
+
+#custom-url-section {
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+#custom-url-section label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+#custom-url-input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.3);
+    color: #e0e0e0;
+    font-size: 13px;
+}
+
+#custom-url-input:disabled {
+    opacity: 0.4;
+}
+
+#puzzle-options {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 8px 12px;
+}
+
+#puzzle-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+#piece-count-select {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.3);
+    color: #e0e0e0;
+    font-size: 14px;
+}
+
+#rotation-checkbox {
+    accent-color: #6c63ff;
+}
+
+/* Help dialog */
+#dialog-help table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#dialog-help td {
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 14px;
+}
+
+#dialog-help td:first-child {
+    color: #aaa;
+    white-space: nowrap;
+}
+
+#dialog-help kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* Celebration */
+#celebration-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Video play overlay */
+#video-play-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#btn-play-video {
+    padding: 16px 32px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: 2px solid #6c63ff;
+    background: rgba(108, 99, 255, 0.3);
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#btn-play-video:hover {
+    background: rgba(108, 99, 255, 0.5);
+}
+
+/* Hidden utility */
+.hidden {
+    display: none !important;
+}
+
+/* Confirm dialog */
+#dialog-confirm p {
+    font-size: 15px;
+    line-height: 1.5;
+}

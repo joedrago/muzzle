@@ -1,0 +1,30 @@
+{
+    "name": "muzzle",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "directories": {
+        "lib": "lib"
+    },
+    "scripts": {
+        "format": "prettier --write .",
+        "lint": "eslint .",
+        "lint:fix": "eslint --fix ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "module",
+    "prettier": {
+        "printWidth": 130,
+        "tabWidth": 4,
+        "trailingComma": "none",
+        "semi": false
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.0.0",
+        "globals": "^17.3.0",
+        "prettier": "^3.8.1"
+    }
+}
