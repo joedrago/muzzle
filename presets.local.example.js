@@ -3,19 +3,16 @@
 //
 // Export a default array of preset objects. Each preset needs:
 //   name: string       - Display name in the picker
-//   url: string        - Image or video URL
-//   type: "image" | "video"
+//   url: string        - Image or video URL (type is auto-detected from extension)
 //   thumbnail?: string - Optional thumbnail URL (falls back to placeholder)
 
 export default [
     {
         name: "My Custom Puzzle",
-        url: "https://example.com/my-image.jpg",
-        type: "image"
+        url: "https://example.com/my-image.jpg"
     }
     // {
     //     name: "My Video Puzzle",
-    //     url: "https://example.com/my-video.mp4",
-    //     type: "video"
+    //     url: "https://example.com/my-video.mp4"
     // }
 ]

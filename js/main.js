@@ -48,7 +48,8 @@ class App {
     }
 
     async _init() {
-        await loadLocalPresets()
+        const presetsChanged = await loadLocalPresets()
+        if (presetsChanged) this.ui._buildPresetList()
 
         // Check for share link query params
         const shareParams = this._parseShareParams()
@@ -117,7 +118,7 @@ class App {
     // ── Puzzle lifecycle ──────────────────────────────
 
     async startNewPuzzle(opts) {
-        const { url, type, name, pieceSize, rotationEnabled } = opts
+        const { url, name, pieceSize, rotationEnabled } = opts
 
         this.ui.hideCelebration()
         this.completed = false
@@ -125,7 +126,7 @@ class App {
 
         try {
             // Load media
-            const mediaType = type || detectMediaType(url)
+            const mediaType = detectMediaType(url)
             const { aspectRatio } = await this.media.load(url, mediaType)
 
             // Use explicit cols/rows (shared puzzles) or calculate from piece size

@@ -202,12 +202,10 @@ body {
     box-shadow: 0 0 8px rgba(108, 99, 255, 0.25);
 }
 
-.preset-item::after {
-    content: attr(data-name);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+.preset-tooltip {
+    position: fixed;
+    transform: translate(-50%, -100%);
+    margin-top: -6px;
     padding: 4px 8px;
     background: rgba(0, 0, 0, 0.85);
     color: #fff;
@@ -216,12 +214,10 @@ body {
     border-radius: 4px;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.1s;
-    z-index: 10;
-    margin-bottom: 4px;
+    z-index: 1000;
 }
 
-.preset-item:hover::after {
+.preset-tooltip.visible {
     opacity: 1;
 }
 

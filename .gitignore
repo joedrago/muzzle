@@ -3,3 +3,6 @@ package-lock.json
 .claude/
 .playwright-mcp/
 presets.local.js
+images/
+videos/
+thumbs/

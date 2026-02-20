@@ -1,3 +1,5 @@
+import { detectMediaType } from "./media.js"
+
 // ── Preset puzzles ────────────────────────────────────
 
 const DEFAULT_PRESETS = [
@@ -5,36 +7,31 @@ const DEFAULT_PRESETS = [
         name: "Sunset Mountains",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/1280px-Sunrise_over_the_sea.jpg",
         thumbnail:
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/200px-Sunrise_over_the_sea.jpg",
-        type: "image"
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/200px-Sunrise_over_the_sea.jpg"
     },
     {
         name: "Starry Night",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
         thumbnail:
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
-        type: "image"
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"
     },
     {
         name: "Coral Reef",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/1280px-Coral_reef_at_palmyra.jpg",
         thumbnail:
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/200px-Coral_reef_at_palmyra.jpg",
-        type: "image"
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/200px-Coral_reef_at_palmyra.jpg"
     },
     {
         name: "Earth from Space",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg",
         thumbnail:
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/200px-The_Earth_seen_from_Apollo_17.jpg",
-        type: "image"
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/200px-The_Earth_seen_from_Apollo_17.jpg"
     },
     {
         name: "Japanese Garden",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/1280px-Japanese_garden_%28Cowden%29.jpg",
         thumbnail:
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/200px-Japanese_garden_%28Cowden%29.jpg",
-        type: "image"
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/200px-Japanese_garden_%28Cowden%29.jpg"
     }
 ]
 
@@ -42,12 +39,18 @@ export let PRESETS = DEFAULT_PRESETS
 
 export async function loadLocalPresets() {
     try {
+        console.log("[presets] Attempting to load presets.local.js...")
         const mod = await import("../presets.local.js")
+        console.log("[presets] Loaded module:", mod)
         if (Array.isArray(mod.default) && mod.default.length > 0) {
             PRESETS = mod.default
+            console.log(`[presets] Applied ${PRESETS.length} local preset(s)`)
+            return true
+        } else {
+            console.warn("[presets] presets.local.js has no valid default export, using defaults")
         }
-    } catch (_e) {
-        // presets.local.js doesn't exist — use defaults
+    } catch (e) {
+        console.log("[presets] No presets.local.js found, using defaults:", e.message)
     }
 }
 
@@ -79,6 +82,10 @@ export class UIManager {
         this.videoPlayOverlay = document.getElementById("video-play-overlay")
 
         this._confirmResolve = null
+
+        this._tooltip = document.createElement("div")
+        this._tooltip.className = "preset-tooltip"
+        document.body.appendChild(this._tooltip)
 
         this._bind()
         this._buildPresetList()
@@ -144,7 +151,7 @@ export class UIManager {
                 ? `<img class="preset-thumb" src="${preset.thumbnail}" alt="${preset.name}" loading="lazy"
                     onerror="this.outerHTML='<div class=\\'preset-thumb-placeholder\\'>?</div>'">`
                 : `<div class="preset-thumb-placeholder">?</div>`
-            div.dataset.name = preset.name + (preset.type === "video" ? " (video)" : "")
+            const label = preset.name + (detectMediaType(preset.url) === "video" ? " (video)" : "")
             div.innerHTML = `
                 <input type="radio" name="puzzle-source" value="preset-${idx}" id="preset-${idx}"
                   ${idx === 0 ? "checked" : ""}>
@@ -155,6 +162,16 @@ export class UIManager {
                 div.classList.add("selected")
                 document.getElementById(`preset-${idx}`).checked = true
                 document.getElementById("custom-url-input").disabled = true
+            })
+            div.addEventListener("mouseenter", (e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                this._tooltip.textContent = label
+                this._tooltip.style.left = rect.left + rect.width / 2 + "px"
+                this._tooltip.style.top = rect.top + "px"
+                this._tooltip.classList.add("visible")
+            })
+            div.addEventListener("mouseleave", () => {
+                this._tooltip.classList.remove("visible")
             })
             list.appendChild(div)
         })
@@ -258,18 +275,16 @@ export class UIManager {
         const selected = document.querySelector('input[name="puzzle-source"]:checked')
         if (!selected) return
 
-        let url, type, name
+        let url, name
 
         if (selected.value === "custom") {
             url = document.getElementById("custom-url-input").value.trim()
             if (!url) return
             name = "Custom Puzzle"
-            type = null // auto-detect
         } else {
             const idx = parseInt(selected.value.replace("preset-", ""))
             const preset = PRESETS[idx]
             url = preset.url
-            type = preset.type
             name = preset.name
         }
 
@@ -277,7 +292,7 @@ export class UIManager {
         const rotationEnabled = document.getElementById("rotation-checkbox").checked
 
         this.closePuzzleSelect()
-        this.app.startNewPuzzle({ url, type, name, pieceSize, rotationEnabled })
+        this.app.startNewPuzzle({ url, name, pieceSize, rotationEnabled })
     }
 
     async _onShare() {
