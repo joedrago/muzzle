@@ -204,7 +204,7 @@ export class UIManager {
     async _onCleanup() {
         const yes = await this.confirm("This will reorganize all pieces into a grid. Continue?")
         if (yes) {
-            this.app.cleanup()
+            this.app.cleanup(true)
         }
     }
 

@@ -100,7 +100,7 @@ class App {
             this.puzzleData = generatePuzzle(cols, rows, seed, this.renderer)
             this.cm.init(this.puzzleData, this.puzzleData.pieces)
 
-            // Shuffle
+            // Shuffle then organize around the solution area
             this.cm.shuffle(rotationEnabled)
 
             // Setup input
@@ -112,13 +112,8 @@ class App {
                 this.input.heldChunkId = null
             }
 
-            // Center camera
-            this.renderer.camera.x = 0
-            this.renderer.camera.y = 0
-            this.renderer.camera.zoom = Math.min(
-                this.canvas.width / (this.puzzleData.puzzleWidth * 3),
-                this.canvas.height / (this.puzzleData.puzzleHeight * 3)
-            )
+            // Organize pieces around the overlay and zoom to fit
+            this.cleanup()
 
             // Show audio controls for video
             if (mediaType === "video") {
@@ -279,6 +274,20 @@ class App {
             }
         }
 
+        // Solution area border outline
+        if (!this.completed) {
+            const puzzleW = this.puzzleData.puzzleWidth
+            const puzzleH = this.puzzleData.puzzleHeight
+            const bx = -puzzleW / 2
+            const by = -puzzleH / 2
+            const t = 2 / (this.renderer.camera.zoom || 1) // 2px screen-space thickness
+            const borderColor = [1.0, 1.0, 1.0, 0.15]
+            r.drawRect(bx, by, puzzleW, t, borderColor) // top
+            r.drawRect(bx, by + puzzleH - t, puzzleW, t, borderColor) // bottom
+            r.drawRect(bx, by, t, puzzleH, borderColor) // left
+            r.drawRect(bx + puzzleW - t, by, t, puzzleH, borderColor) // right
+        }
+
         // Solution overlay
         if (this.showSolution) {
             const puzzleW = this.puzzleData.puzzleWidth
@@ -367,10 +376,10 @@ class App {
         this._needsRender = true
     }
 
-    cleanup() {
+    cleanup(skipInside = false) {
         const cam = this.renderer.camera
         const aspect = this.canvas.width / this.canvas.height
-        const bounds = this.cm.cleanup(aspect)
+        const bounds = this.cm.cleanup(aspect, skipInside)
         if (bounds) {
             // Center camera on the layout and zoom to fit
             cam.x = 0

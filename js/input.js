@@ -366,7 +366,7 @@ export class InputManager {
                 this.app.toggleMute()
                 break
             case "c":
-                this.app.cleanup()
+                this.app.cleanup(true)
                 break
             case "h":
             case "?":

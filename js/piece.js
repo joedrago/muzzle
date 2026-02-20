@@ -383,57 +383,136 @@ export class ChunkManager {
         }
     }
 
-    cleanup(canvasAspect) {
+    // Check what fraction of a chunk's bounding box overlaps the overlay area
+    _chunkOverlapFraction(chunk) {
+        const center = this.getChunkWorldCenter(chunk.id)
+        const size = this._getChunkWorldSize(chunk)
+        const puzzleW = this.puzzleData.puzzleWidth
+        const puzzleH = this.puzzleData.puzzleHeight
+
+        const cL = center[0] - size.w / 2
+        const cR = center[0] + size.w / 2
+        const cT = center[1] - size.h / 2
+        const cB = center[1] + size.h / 2
+
+        const oL = Math.max(cL, -puzzleW / 2)
+        const oR = Math.min(cR, puzzleW / 2)
+        const oT = Math.max(cT, -puzzleH / 2)
+        const oB = Math.min(cB, puzzleH / 2)
+
+        if (oL >= oR || oT >= oB) return 0
+        return ((oR - oL) * (oB - oT)) / (size.w * size.h)
+    }
+
+    cleanup(canvasAspect, skipInside = false) {
         const pw = this.puzzleData.pieceW
         const minMargin = pw * 1.5 // enough to clear tab overhang on both sides
 
-        const chunkArray = Array.from(this.chunks.values())
-        const n = chunkArray.length
+        const allChunks = Array.from(this.chunks.values())
+        if (allChunks.length === 0) return null
+
+        // Separate chunks: leave ones mostly inside the overlay area alone
+        const toOrganize = []
+        for (const chunk of allChunks) {
+            if (skipInside && this._chunkOverlapFraction(chunk) > 0.5) continue
+            toOrganize.push(chunk)
+        }
+
+        const n = toOrganize.length
         if (n === 0) return null
 
-        // Compute world center for each chunk
-        const chunkCenters = chunkArray.map((chunk) => ({
+        // Compute world center for chunks to organize
+        const chunkCenters = toOrganize.map((chunk) => ({
             chunk,
             center: this.getChunkWorldCenter(chunk.id)
         }))
 
         // Compute bounding size of each chunk accounting for rotation
-        const sizes = chunkArray.map((chunk) => this._getChunkWorldSize(chunk))
+        const sizes = toOrganize.map((chunk) => this._getChunkWorldSize(chunk))
         const maxChunkW = Math.max(...sizes.map((s) => s.w))
         const maxChunkH = Math.max(...sizes.map((s) => s.h))
-
-        // Grid dimensions: match the canvas aspect ratio
-        const cols = Math.max(1, Math.round(Math.sqrt(n * canvasAspect)))
-        const rows = Math.ceil(n / cols)
-
-        // Sort spatially: by Y position first to assign to rows, then by X within each row
-        chunkCenters.sort((a, b) => a.center[1] - b.center[1])
-        const sorted = []
-        for (let r = 0; r < rows; r++) {
-            const start = r * cols
-            const end = Math.min(start + cols, n)
-            const rowChunks = chunkCenters.slice(start, end)
-            rowChunks.sort((a, b) => a.center[0] - b.center[0])
-            sorted.push(...rowChunks.map((cc) => cc.chunk))
-        }
 
         // Cell size: minimum needed to fit chunks with margin
         const cellW = maxChunkW + minMargin
         const cellH = maxChunkH + minMargin
 
-        // Center the grid on the origin
+        // Reserve zone for the solution overlay (centered at origin, with margin)
+        const puzzleW = this.puzzleData.puzzleWidth
+        const puzzleH = this.puzzleData.puzzleHeight
+        const reservePad = pw * 0.5
+        const reserveLeft = -puzzleW / 2 - reservePad
+        const reserveRight = puzzleW / 2 + reservePad
+        const reserveTop = -puzzleH / 2 - reservePad
+        const reserveBottom = puzzleH / 2 + reservePad
+
+        // Build grid, expanding until enough cells exist outside the reserve zone
+        let cols = Math.max(1, Math.round(Math.sqrt(n * canvasAspect)))
+        let rows = Math.ceil(n / cols)
+        let freeCells
+
+        while (true) {
+            const totalW = cols * cellW
+            const totalH = rows * cellH
+            const sx = -totalW / 2
+            const sy = -totalH / 2
+
+            freeCells = []
+            for (let gr = 0; gr < rows; gr++) {
+                for (let gc = 0; gc < cols; gc++) {
+                    const cx = sx + (gc + 0.5) * cellW
+                    const cy = sy + (gr + 0.5) * cellH
+                    // Skip if cell overlaps the reserve zone
+                    if (
+                        cx + cellW / 2 > reserveLeft &&
+                        cx - cellW / 2 < reserveRight &&
+                        cy + cellH / 2 > reserveTop &&
+                        cy - cellH / 2 < reserveBottom
+                    ) {
+                        continue
+                    }
+                    freeCells.push({ gc, gr })
+                }
+            }
+
+            if (freeCells.length >= n) break
+            if (cols / rows < canvasAspect) cols++
+            else rows++
+        }
+
+        // Sort spatially: match chunk bands to how many free cells each grid row has
+        // so rows near the hole (with fewer cells) get fewer chunks
+        const cellsPerRow = new Array(rows).fill(0)
+        for (const { gr } of freeCells) {
+            cellsPerRow[gr]++
+        }
+        chunkCenters.sort((a, b) => a.center[1] - b.center[1])
+        const sorted = []
+        let ci = 0
+        for (let r = 0; r < rows; r++) {
+            const count = cellsPerRow[r]
+            const band = chunkCenters.slice(ci, ci + count)
+            band.sort((a, b) => a.center[0] - b.center[0])
+            sorted.push(...band.map((cc) => cc.chunk))
+            ci += count
+        }
+
+        // Place chunks in free cells with deterministic jitter for a natural look
         const totalW = cols * cellW
         const totalH = rows * cellH
         const startX = -totalW / 2
         const startY = -totalH / 2
+        const jitter = minMargin * 0.3
 
         for (let i = 0; i < n; i++) {
             const chunk = sorted[i]
-            const gc = i % cols
-            const gr = Math.floor(i / cols)
+            const { gc, gr } = freeCells[i]
 
-            const cellCenterX = startX + (gc + 0.5) * cellW
-            const cellCenterY = startY + (gr + 0.5) * cellH
+            // Deterministic jitter from chunk ID so repeated cleanups are stable
+            const h = chunk.id * 2654435761
+            const jx = ((h >>> 0) % 1000) / 1000 - 0.5
+            const jy = (((h * 2246822519) >>> 0) % 1000) / 1000 - 0.5
+            const cellCenterX = startX + (gc + 0.5) * cellW + jx * jitter
+            const cellCenterY = startY + (gr + 0.5) * cellH + jy * jitter
 
             // Place chunk so its visual center lands on the cell center
             const localCenter = this._getChunkLocalCenter(chunk)
