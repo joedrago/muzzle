@@ -125,6 +125,9 @@ class App {
         this.showSolution = false
 
         try {
+            // Tear down previous media (stops any playing video/audio)
+            this.media.destroy()
+
             // Load media
             const mediaType = detectMediaType(url)
             const { aspectRatio } = await this.media.load(url, mediaType)
