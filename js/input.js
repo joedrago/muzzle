@@ -19,6 +19,9 @@ export class InputManager {
 
         this.state = IDLE
 
+        // Double-click detection
+        this._lastPickupTime = 0
+
         // Held chunk
         this.heldChunkId = null
         this.holdOffset = [0, 0] // offset from chunk origin to pick point
@@ -75,7 +78,15 @@ export class InputManager {
         }
 
         if (this.state === HOLDING_CLICK) {
-            // Already holding via click mode — don't start a new action
+            // Double-click: if we just picked this piece up, rotate it in place instead of re-picking
+            if (e.button === 0 && this.heldChunkId !== null && Date.now() - this._lastPickupTime < 400) {
+                this.cm.rotateChunkAroundCenter(this.heldChunkId)
+                this.heldChunkId = null
+                this.heldChunkIds = null
+                this.state = IDLE
+                this._skipNextClick = true
+                this.app.markDirty()
+            }
             return
         }
 
@@ -202,6 +213,7 @@ export class InputManager {
         this.heldChunkId = hit.chunkId
         this.holdOffset = [chunk.x - worldPos[0], chunk.y - worldPos[1]]
         this.heldChunkIds = null
+        this._lastPickupTime = Date.now()
 
         this.cm.bringToFront(hit.chunkId)
         this._skipNextClick = true
