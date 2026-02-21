@@ -45,6 +45,11 @@ function getVideoDuration(path) {
 for (const { path, type } of sources) {
     const out = join("thumbs", basename(path, extname(path)) + ".png")
 
+    if (existsSync(out)) {
+        console.log(`  skipping ${path} (thumb exists)`)
+        continue
+    }
+
     try {
         let args
         if (type === "video") {
