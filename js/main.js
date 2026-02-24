@@ -4,7 +4,7 @@ import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
 import { StateManager } from "./state.js"
-import { UIManager, loadLocalPresets } from "./ui.js"
+import { UIManager, loadLocalPresets, resolveUrl } from "./ui.js"
 import { mat3 } from "./math-utils.js"
 
 class App {
@@ -22,6 +22,7 @@ class App {
         this.completed = false
         this.showSolution = false
         this.dialogOpen = false
+        this.challenge = null // { presets, index, pieceSize, rotationEnabled }
         this._needsRender = true
         this._animFrame = null
 
@@ -47,9 +48,83 @@ class App {
         this._init()
     }
 
+    _parseChallengeParams() {
+        const params = new URLSearchParams(window.location.search)
+        const challengeUrl = params.get("c")
+        if (!challengeUrl) return null
+        const ps = params.get("ps")
+        const r = params.get("r")
+        return {
+            challengeUrl,
+            pieceSize: ps ? parseInt(ps) : null,
+            rotationEnabled: r != null ? r !== "0" : null
+        }
+    }
+
     async _init() {
         const presetsChanged = await loadLocalPresets()
         if (presetsChanged) this.ui._buildPresetList()
+
+        // Check for challenge mode query params
+        const challengeParams = this._parseChallengeParams()
+        if (challengeParams) {
+            window.history.replaceState({}, "", window.location.pathname)
+
+            const saved = this.state.load()
+            if (saved) {
+                this._startRenderLoop()
+                try {
+                    await this._restorePuzzle(saved)
+                } catch (_e) {
+                    this.state.clear()
+                }
+            }
+
+            let presets
+            try {
+                const resp = await fetch(challengeParams.challengeUrl)
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+                presets = await resp.json()
+                if (!Array.isArray(presets) || presets.length === 0) {
+                    throw new Error("Challenge JSON must be a non-empty array")
+                }
+                // Resolve relative URLs against the challenge JSON location
+                const baseUrl = challengeParams.challengeUrl
+                presets = presets.map((p) => ({
+                    ...p,
+                    url: resolveUrl(p.url, baseUrl),
+                    thumbnail: p.thumbnail ? resolveUrl(p.thumbnail, baseUrl) : p.thumbnail
+                }))
+            } catch (e) {
+                alert("Failed to load challenge: " + e.message)
+                if (!saved) this.ui.showPuzzleSelect()
+                this._startRenderLoop()
+                return
+            }
+
+            const result = await this.ui.showChallengeStart(
+                presets.length,
+                challengeParams.pieceSize,
+                challengeParams.rotationEnabled,
+                !!saved
+            )
+            if (!result) {
+                // Cancelled — keep current state
+                this._startRenderLoop()
+                return
+            }
+
+            this.challenge = {
+                url: challengeParams.challengeUrl,
+                presets,
+                index: 0,
+                pieceSize: result.pieceSize,
+                rotationEnabled: result.rotationEnabled
+            }
+            this._startChallengeAt(0)
+            this._startRenderLoop()
+            return
+        }
 
         // Check for share link query params
         const shareParams = this._parseShareParams()
@@ -99,12 +174,18 @@ class App {
             cols: parseInt(params.get("cols")) || null,
             rows: parseInt(params.get("rows")) || null,
             rotationEnabled: params.get("r") !== "0",
-            seed: parseInt(params.get("s")) || null,
-            name: "Shared Puzzle"
+            seed: parseInt(params.get("s")) || null
         }
     }
 
     getShareUrl() {
+        if (this.challenge) {
+            const params = new URLSearchParams()
+            params.set("c", this.challenge.url)
+            params.set("ps", this.challenge.pieceSize)
+            params.set("r", this.challenge.rotationEnabled ? "1" : "0")
+            return window.location.origin + window.location.pathname + "?" + params.toString()
+        }
         if (!this.puzzleConfig) return null
         const params = new URLSearchParams()
         params.set("u", this.puzzleConfig.url)
@@ -115,10 +196,35 @@ class App {
         return window.location.origin + window.location.pathname + "?" + params.toString()
     }
 
-    // ── Puzzle lifecycle ──────────────────────────────
+    // -- Challenge lifecycle --------------------------
+
+    _startChallengeAt(index) {
+        this.challenge.index = index
+        const preset = this.challenge.presets[index]
+        this.ui.hideChallengeNextButton()
+        this.ui.updateChallengeIndicator(index + 1, this.challenge.presets.length)
+        this.startNewPuzzle({
+            url: preset.url,
+            pieceSize: this.challenge.pieceSize,
+            rotationEnabled: this.challenge.rotationEnabled
+        })
+    }
+
+    advanceChallenge() {
+        if (!this.challenge || !this.completed) return
+        this._startChallengeAt(this.challenge.index + 1)
+    }
+
+    exitChallenge() {
+        if (!this.challenge) return
+        this.challenge = null
+        this.ui.hideChallengeUI()
+    }
+
+    // -- Puzzle lifecycle ------------------------------
 
     async startNewPuzzle(opts) {
-        const { url, name, pieceSize, rotationEnabled } = opts
+        const { url, pieceSize, rotationEnabled } = opts
 
         this.ui.hideCelebration()
         this.completed = false
@@ -140,7 +246,6 @@ class App {
 
             // Store config
             this.puzzleConfig = {
-                name: name || "Puzzle",
                 url,
                 type: mediaType,
                 seed,
@@ -198,7 +303,6 @@ class App {
         await this.media.load(p.url, p.type)
 
         this.puzzleConfig = {
-            name: p.name,
             url: p.url,
             type: p.type,
             seed: p.seed,
@@ -247,6 +351,16 @@ class App {
             this.ui.hideAudioControls()
         }
 
+        // Restore challenge state
+        if (saved.challenge) {
+            this.challenge = saved.challenge
+            this.ui.updateChallengeIndicator(this.challenge.index + 1, this.challenge.presets.length)
+            if (this.completed) {
+                const isLast = this.challenge.index >= this.challenge.presets.length - 1
+                if (!isLast) this.ui.showChallengeNextButton()
+            }
+        }
+
         this._needsRender = true
         this._startRenderLoop()
     }
@@ -268,7 +382,7 @@ class App {
         this._needsRender = true
     }
 
-    // ── Render loop ───────────────────────────────────
+    // -- Render loop -----------------------------------
 
     _startRenderLoop() {
         if (this._animFrame) return
@@ -374,7 +488,7 @@ class App {
         }
     }
 
-    // ── App actions (called by input/UI) ──────────────
+    // -- App actions (called by input/UI) --------------
 
     markDirty() {
         this._needsRender = true
@@ -385,8 +499,19 @@ class App {
         if (this.cm.isComplete() && !this.completed) {
             this.completed = true
             this.showSolution = false
-            this.ui.showCelebration()
             this.state.markDirty()
+
+            if (this.challenge) {
+                const isLast = this.challenge.index >= this.challenge.presets.length - 1
+                if (isLast) {
+                    this.ui.showChallengeFinalCelebration()
+                } else {
+                    this.ui.showCelebration()
+                    this.ui.showChallengeNextButton()
+                }
+            } else {
+                this.ui.showCelebration()
+            }
         }
     }
 
@@ -454,11 +579,11 @@ class App {
         this.state.markDirty()
     }
 
-    // ── Save data builder ─────────────────────────────
+    // -- Save data builder -----------------------------
 
     _buildSaveData() {
         if (!this.puzzleConfig) return null
-        return this.state.buildSaveData(
+        const data = this.state.buildSaveData(
             this.puzzleConfig,
             this.cm,
             this.renderer.camera,
@@ -466,9 +591,19 @@ class App {
             this.media.getVolume(),
             this.media.getMuted()
         )
+        if (this.challenge) {
+            data.challenge = {
+                url: this.challenge.url,
+                presets: this.challenge.presets,
+                index: this.challenge.index,
+                pieceSize: this.challenge.pieceSize,
+                rotationEnabled: this.challenge.rotationEnabled
+            }
+        }
+        return data
     }
 }
 
-// ── Bootstrap ─────────────────────────────────────────
+// -- Bootstrap -----------------------------------------
 
 const _app = new App()

@@ -8,7 +8,7 @@ export const EDGE_NEG = -1 // blank (inward notch)
 
 export const WORLD_PIECE_SIZE = 100 // base piece size in world pixels
 
-// ── Grid calculation ──────────────────────────────────
+// -- Grid calculation ----------------------------------
 
 export function calculateGrid(shortSide, aspectRatio) {
     if (aspectRatio >= 1) {
@@ -24,7 +24,7 @@ export function calculateGrid(shortSide, aspectRatio) {
     }
 }
 
-// ── Edge assignment ───────────────────────────────────
+// -- Edge assignment -----------------------------------
 
 export function generateEdges(cols, rows, rng) {
     // hEdges[row][col] = edge type for the horizontal edge below piece (row, col)
@@ -50,7 +50,7 @@ export function generateEdges(cols, rows, rng) {
     return { hEdges, vEdges }
 }
 
-// ── Edge random parameters ────────────────────────────
+// -- Edge random parameters ----------------------------
 // Draradech-style: t controls tab size, a-e are per-edge jitter
 
 function randomEdgeParams(rng) {
@@ -90,7 +90,7 @@ export function generateEdgeParams(cols, rows, rng) {
     return { hParams, vParams }
 }
 
-// ── Bezier tab outline (Draradech-style) ─────────────
+// -- Bezier tab outline (Draradech-style) -------------
 
 // Generate points along an edge from (0,0) to (edgeLen, 0)
 // direction: 1 for POS (tab goes in +Y), -1 for NEG (blank goes in -Y)
@@ -128,7 +128,7 @@ function generateEdgePoints(edgeLen, direction, params) {
     return [...seg1, ...seg2.slice(1), ...seg3.slice(1)]
 }
 
-// ── Piece outline generation ──────────────────────────
+// -- Piece outline generation --------------------------
 
 export function generatePieceOutline(col, row, cols, rows, edges, edgeParams, pieceW, pieceH) {
     const { hEdges, vEdges } = edges
@@ -219,7 +219,7 @@ export function generatePieceOutline(col, row, cols, rows, edges, edgeParams, pi
     return cleaned
 }
 
-// ── Triangulation + mesh creation ─────────────────────
+// -- Triangulation + mesh creation ---------------------
 
 export function triangulatePiece(outline) {
     // Flatten to earcut format
@@ -251,7 +251,7 @@ export function buildPieceMesh(outline, indices, col, row, cols, rows, pieceW, p
     return { vertData, indexData, triCount: indices.length / 3 }
 }
 
-// ── Outline strip generation (triangle strip for thick borders) ──
+// -- Outline strip generation (triangle strip for thick borders) --
 
 const OUTLINE_WIDTH = 1.2 // world units (piece size = 100)
 
@@ -303,7 +303,7 @@ function buildOutlineStrip(outline) {
     return new Float32Array(verts)
 }
 
-// ── Full puzzle generation ────────────────────────────
+// -- Full puzzle generation ----------------------------
 
 export function generatePuzzle(cols, rows, seed, renderer) {
     const rng = mulberry32(seed)

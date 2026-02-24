@@ -1,6 +1,6 @@
 import { mat3 } from "./math-utils.js"
 
-// ── Shader sources ────────────────────────────────────
+// -- Shader sources ------------------------------------
 
 const PIECE_VS = `
   attribute vec2 a_position;
@@ -48,7 +48,7 @@ const FLAT_FS = `
   }
 `
 
-// ── Shader compilation helpers ────────────────────────
+// -- Shader compilation helpers ------------------------
 
 function compileShader(gl, type, source) {
     const shader = gl.createShader(type)
@@ -76,7 +76,7 @@ function createProgram(gl, vsSource, fsSource) {
     return program
 }
 
-// ── Renderer class ────────────────────────────────────
+// -- Renderer class ------------------------------------
 
 export class Renderer {
     constructor(canvas) {
@@ -187,7 +187,7 @@ export class Renderer {
         this.camera.y += wy - nwy
     }
 
-    // ── Texture management ──────────────────────────────
+    // -- Texture management ------------------------------
 
     createTexture(source) {
         const gl = this.gl
@@ -209,7 +209,7 @@ export class Renderer {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source)
     }
 
-    // ── Buffer creation ─────────────────────────────────
+    // -- Buffer creation ---------------------------------
 
     createVBO(data) {
         const gl = this.gl
@@ -227,7 +227,7 @@ export class Renderer {
         return buf
     }
 
-    // ── Drawing ─────────────────────────────────────────
+    // -- Drawing -----------------------------------------
 
     clear() {
         const gl = this.gl

@@ -1,6 +1,6 @@
 import { mat3, vec2, degToRad, pointInPolygon, aabbFromPoints, pointInAABB } from "./math-utils.js"
 
-// ── Chunk class ───────────────────────────────────────
+// -- Chunk class ---------------------------------------
 
 export class Chunk {
     constructor(id, x, y, rotation = 0) {
@@ -51,7 +51,7 @@ export class Chunk {
     }
 }
 
-// ── ChunkManager ──────────────────────────────────────
+// -- ChunkManager --------------------------------------
 
 export class ChunkManager {
     constructor() {
@@ -83,7 +83,7 @@ export class ChunkManager {
         return this.chunks.get(this.pieces[pieceId].chunkId)
     }
 
-    // ── Shuffle / Initial placement ───────────────────
+    // -- Shuffle / Initial placement -------------------
 
     shuffle(rotationEnabled) {
         const { cols, rows, pieceW, pieceH } = this.puzzleData
@@ -110,7 +110,7 @@ export class ChunkManager {
         }
     }
 
-    // ── Restore from save ─────────────────────────────
+    // -- Restore from save -----------------------------
 
     restoreChunks(savedChunks) {
         this.chunks.clear()
@@ -127,7 +127,7 @@ export class ChunkManager {
         }
     }
 
-    // ── Snap detection ────────────────────────────────
+    // -- Snap detection --------------------------------
 
     // Get where a piece's grid neighbor should be in world space
     _getExpectedNeighborWorldPos(piece, neighborCol, neighborRow, chunk) {
@@ -285,7 +285,7 @@ export class ChunkManager {
         this.removeChunk(mergeId)
     }
 
-    // ── Win detection ─────────────────────────────────
+    // -- Win detection ---------------------------------
 
     isComplete() {
         if (this.chunks.size !== 1) return false
@@ -294,7 +294,7 @@ export class ChunkManager {
         return chunk.pieces.size === totalPieces
     }
 
-    // ── Hit testing ───────────────────────────────────
+    // -- Hit testing -----------------------------------
 
     hitTest(worldX, worldY) {
         // Test from top (last drawn) to bottom
@@ -358,7 +358,7 @@ export class ChunkManager {
         return result
     }
 
-    // ── Cleanup (reorganize) ──────────────────────────
+    // -- Cleanup (reorganize) --------------------------
 
     _getChunkWorldSize(chunk) {
         const pw = this.puzzleData.pieceW
@@ -539,7 +539,7 @@ export class ChunkManager {
         return { totalW: maxX - minX, totalH: maxY - minY, centerX: (minX + maxX) / 2, centerY: (minY + maxY) / 2 }
     }
 
-    // ── Rotation around center ──────────────────────────
+    // -- Rotation around center --------------------------
 
     _getChunkLocalCenter(chunk) {
         const pw = this.puzzleData.pieceW
@@ -587,7 +587,7 @@ export class ChunkManager {
         this.chunks.set(chunkId, chunk)
     }
 
-    // ── Serialization ─────────────────────────────────
+    // -- Serialization ---------------------------------
 
     serialize() {
         const chunks = []

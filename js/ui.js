@@ -1,34 +1,29 @@
 import { detectMediaType } from "./media.js"
 
-// ── Preset puzzles ────────────────────────────────────
+// -- Preset puzzles ------------------------------------
 
 const DEFAULT_PRESETS = [
     {
-        name: "Sunset Mountains",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/1280px-Sunrise_over_the_sea.jpg",
         thumbnail:
             "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Sunrise_over_the_sea.jpg/200px-Sunrise_over_the_sea.jpg"
     },
     {
-        name: "Starry Night",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
         thumbnail:
             "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/200px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg"
     },
     {
-        name: "Coral Reef",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/1280px-Coral_reef_at_palmyra.jpg",
         thumbnail:
             "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Coral_reef_at_palmyra.jpg/200px-Coral_reef_at_palmyra.jpg"
     },
     {
-        name: "Earth from Space",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg",
         thumbnail:
             "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/200px-The_Earth_seen_from_Apollo_17.jpg"
     },
     {
-        name: "Japanese Garden",
         url: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/1280px-Japanese_garden_%28Cowden%29.jpg",
         thumbnail:
             "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Japanese_garden_%28Cowden%29.jpg/200px-Japanese_garden_%28Cowden%29.jpg"
@@ -37,13 +32,39 @@ const DEFAULT_PRESETS = [
 
 export let PRESETS = DEFAULT_PRESETS
 
+export function resolveUrl(url, baseUrl) {
+    if (!url) return url
+    try {
+        new URL(url)
+        return url
+    } catch {
+        return new URL(url, baseUrl).href
+    }
+}
+
+export function labelFromUrl(url) {
+    try {
+        const path = new URL(url, "https://x").pathname
+        const filename = decodeURIComponent(path.split("/").pop() || "")
+        const stem = filename.replace(/\.[^.]+$/, "")
+        return stem.replace(/[-_]+/g, " ")
+    } catch {
+        return url
+    }
+}
+
 export async function loadLocalPresets() {
     try {
         console.log("[presets] Attempting to load presets.local.js...")
         const mod = await import("../presets.local.js")
         console.log("[presets] Loaded module:", mod)
         if (Array.isArray(mod.default) && mod.default.length > 0) {
-            PRESETS = mod.default
+            const baseUrl = new URL("../presets.local.js", window.location.href).href
+            PRESETS = mod.default.map((p) => ({
+                ...p,
+                url: resolveUrl(p.url, baseUrl),
+                thumbnail: p.thumbnail ? resolveUrl(p.thumbnail, baseUrl) : p.thumbnail
+            }))
             console.log(`[presets] Applied ${PRESETS.length} local preset(s)`)
             return true
         } else {
@@ -54,7 +75,7 @@ export async function loadLocalPresets() {
     }
 }
 
-// ── UI Manager ────────────────────────────────────────
+// -- UI Manager ----------------------------------------
 
 export class UIManager {
     constructor(app) {
@@ -78,10 +99,16 @@ export class UIManager {
         this.puzzleDialog = document.getElementById("dialog-puzzle-select")
         this.confirmDialog = document.getElementById("dialog-confirm")
         this.helpDialog = document.getElementById("dialog-help")
+        this.challengeDialog = document.getElementById("dialog-challenge-start")
         this.celebrationOverlay = document.getElementById("celebration-overlay")
         this.videoPlayOverlay = document.getElementById("video-play-overlay")
 
+        // Challenge UI
+        this.challengeIndicator = document.getElementById("challenge-indicator")
+        this.btnChallengeNext = document.getElementById("btn-challenge-next")
+
         this._confirmResolve = null
+        this._challengeResolve = null
 
         this._tooltip = document.createElement("div")
         this._tooltip.className = "preset-tooltip"
@@ -122,6 +149,24 @@ export class UIManager {
 
         document.getElementById("btn-close-help").addEventListener("click", () => this.closeHelp())
 
+        document.getElementById("btn-challenge-begin").addEventListener("click", () => {
+            if (this._challengeResolve) {
+                const pieceSize = parseInt(document.getElementById("challenge-piecesize-select").value)
+                const rotationEnabled = document.getElementById("challenge-rotation-checkbox").checked
+                this._challengeResolve({ pieceSize, rotationEnabled })
+                this._challengeResolve = null
+            }
+            this._hideDialog(this.challengeDialog)
+        })
+        document.getElementById("btn-challenge-cancel").addEventListener("click", () => {
+            if (this._challengeResolve) {
+                this._challengeResolve(null)
+                this._challengeResolve = null
+            }
+            this._hideDialog(this.challengeDialog)
+        })
+        this.btnChallengeNext.addEventListener("click", () => this.app.advanceChallenge())
+
         document.getElementById("btn-play-video").addEventListener("click", () => {
             this.app.startVideo()
             this.hideVideoPlayOverlay()
@@ -148,10 +193,10 @@ export class UIManager {
             const div = document.createElement("div")
             div.className = "preset-item" + (idx === 0 ? " selected" : "")
             const thumbHtml = preset.thumbnail
-                ? `<img class="preset-thumb" src="${preset.thumbnail}" alt="${preset.name}" loading="lazy"
+                ? `<img class="preset-thumb" src="${preset.thumbnail}" loading="lazy"
                     onerror="this.outerHTML='<div class=\\'preset-thumb-placeholder\\'>?</div>'">`
                 : `<div class="preset-thumb-placeholder">?</div>`
-            const label = preset.name + (detectMediaType(preset.url) === "video" ? " (video)" : "")
+            const label = labelFromUrl(preset.url) + (detectMediaType(preset.url) === "video" ? " (video)" : "")
             div.innerHTML = `
                 <input type="radio" name="puzzle-source" value="preset-${idx}" id="preset-${idx}"
                   ${idx === 0 ? "checked" : ""}>
@@ -177,7 +222,7 @@ export class UIManager {
         })
     }
 
-    // ── Dialog management ─────────────────────────────
+    // -- Dialog management -----------------------------
 
     _showDialog(dialog) {
         this.backdrop.classList.remove("hidden")
@@ -190,7 +235,8 @@ export class UIManager {
         if (
             this.puzzleDialog.classList.contains("hidden") &&
             this.confirmDialog.classList.contains("hidden") &&
-            this.helpDialog.classList.contains("hidden")
+            this.helpDialog.classList.contains("hidden") &&
+            this.challengeDialog.classList.contains("hidden")
         ) {
             this.backdrop.classList.add("hidden")
             this.app.dialogOpen = false
@@ -198,6 +244,7 @@ export class UIManager {
     }
 
     showPuzzleSelect() {
+        this.app.exitChallenge()
         this._populateFromCurrent()
         this._showDialog(this.puzzleDialog)
     }
@@ -267,32 +314,34 @@ export class UIManager {
         this.closeHelp()
         if (this._confirmResolve) this._confirmResolve(false)
         this.closeConfirm()
+        if (this._challengeResolve) {
+            this._challengeResolve(null)
+            this._challengeResolve = null
+        }
+        this._hideDialog(this.challengeDialog)
     }
 
-    // ── Actions ───────────────────────────────────────
+    // -- Actions ---------------------------------------
 
     _onStartPuzzle() {
         const selected = document.querySelector('input[name="puzzle-source"]:checked')
         if (!selected) return
 
-        let url, name
+        let url
 
         if (selected.value === "custom") {
             url = document.getElementById("custom-url-input").value.trim()
             if (!url) return
-            name = "Custom Puzzle"
         } else {
             const idx = parseInt(selected.value.replace("preset-", ""))
-            const preset = PRESETS[idx]
-            url = preset.url
-            name = preset.name
+            url = PRESETS[idx].url
         }
 
         const pieceSize = parseInt(document.getElementById("piece-size-select").value)
         const rotationEnabled = document.getElementById("rotation-checkbox").checked
 
         this.closePuzzleSelect()
-        this.app.startNewPuzzle({ url, name, pieceSize, rotationEnabled })
+        this.app.startNewPuzzle({ url, pieceSize, rotationEnabled })
     }
 
     async _onShare() {
@@ -317,7 +366,7 @@ export class UIManager {
         }
     }
 
-    // ── Puzzle dimensions ─────────────────────────────
+    // -- Puzzle dimensions -----------------------------
 
     updatePuzzleDims(cols, rows) {
         const el = document.getElementById("puzzle-dims")
@@ -329,7 +378,7 @@ export class UIManager {
         }
     }
 
-    // ── Audio controls ────────────────────────────────
+    // -- Audio controls --------------------------------
 
     showAudioControls() {
         this.audioControls.style.display = ""
@@ -347,7 +396,7 @@ export class UIManager {
         this.volumeSlider.value = Math.round(vol * 100)
     }
 
-    // ── Video play overlay ────────────────────────────
+    // -- Video play overlay ----------------------------
 
     showVideoPlayOverlay() {
         this.videoPlayOverlay.classList.remove("hidden")
@@ -357,7 +406,7 @@ export class UIManager {
         this.videoPlayOverlay.classList.add("hidden")
     }
 
-    // ── Celebration ───────────────────────────────────
+    // -- Celebration -----------------------------------
 
     showCelebration() {
         this.badgeComplete.style.display = ""
@@ -389,5 +438,95 @@ export class UIManager {
         this.badgeComplete.style.display = "none"
         this.celebrationOverlay.innerHTML = ""
         this.celebrationOverlay.classList.add("hidden")
+        // Remove any lingering challenge final message
+        document.querySelectorAll(".challenge-final-msg").forEach((el) => el.remove())
+    }
+
+    // -- Challenge Mode UI ----------------------------
+
+    showChallengeStart(count, lockedPieceSize, lockedRotation, hasSavedState) {
+        const desc = document.getElementById("challenge-description")
+        desc.textContent = `This challenge has ${count} puzzle${count !== 1 ? "s" : ""}. Can you complete them all?`
+
+        const pieceSizeSelect = document.getElementById("challenge-piecesize-select")
+        const rotationCheckbox = document.getElementById("challenge-rotation-checkbox")
+
+        if (lockedPieceSize != null) {
+            pieceSizeSelect.value = String(lockedPieceSize)
+            pieceSizeSelect.disabled = true
+        } else {
+            pieceSizeSelect.disabled = false
+        }
+
+        if (lockedRotation != null) {
+            rotationCheckbox.checked = lockedRotation
+            rotationCheckbox.disabled = true
+        } else {
+            rotationCheckbox.disabled = false
+        }
+
+        const warning = document.getElementById("challenge-warning")
+        if (hasSavedState) {
+            warning.classList.remove("hidden")
+        } else {
+            warning.classList.add("hidden")
+        }
+
+        this._showDialog(this.challengeDialog)
+        return new Promise((resolve) => {
+            this._challengeResolve = resolve
+        })
+    }
+
+    updateChallengeIndicator(current, total) {
+        this.challengeIndicator.textContent = `Puzzle ${current} / ${total}`
+        this.challengeIndicator.style.display = ""
+    }
+
+    showChallengeNextButton() {
+        this.btnChallengeNext.style.display = ""
+    }
+
+    hideChallengeNextButton() {
+        this.btnChallengeNext.style.display = "none"
+    }
+
+    hideChallengeUI() {
+        this.challengeIndicator.style.display = "none"
+        this.btnChallengeNext.style.display = "none"
+    }
+
+    showChallengeFinalCelebration() {
+        this.badgeComplete.textContent = "Challenge Complete!"
+        this.badgeComplete.style.display = ""
+        this.celebrationOverlay.classList.remove("hidden")
+
+        // Extra confetti (120 particles)
+        const colors = ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6fff", "#ffa07a"]
+        for (let i = 0; i < 120; i++) {
+            const el = document.createElement("div")
+            el.className = "confetti"
+            el.style.left = Math.random() * 100 + "%"
+            el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]
+            el.style.width = 6 + Math.random() * 8 + "px"
+            el.style.height = 6 + Math.random() * 8 + "px"
+            el.style.borderRadius = Math.random() > 0.5 ? "50%" : "0"
+            el.style.animationDuration = 2 + Math.random() * 3 + "s"
+            el.style.animationDelay = Math.random() * 2 + "s"
+            this.celebrationOverlay.appendChild(el)
+        }
+
+        // Centered overlay message
+        const msg = document.createElement("div")
+        msg.className = "challenge-final-msg"
+        msg.textContent = "You beat the challenge!"
+        document.body.appendChild(msg)
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => {
+            this.celebrationOverlay.innerHTML = ""
+            this.celebrationOverlay.classList.add("hidden")
+            msg.remove()
+        }, 10000)
     }
 }

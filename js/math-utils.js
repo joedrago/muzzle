@@ -1,4 +1,4 @@
-// ── vec2 ──────────────────────────────────────────────
+// -- vec2 ----------------------------------------------
 export const vec2 = {
     create(x = 0, y = 0) {
         return [x, y]
@@ -47,7 +47,7 @@ export const vec2 = {
     }
 }
 
-// ── mat3 (column-major flat array [9]) ───────────────
+// -- mat3 (column-major flat array [9]) ---------------
 export const mat3 = {
     identity() {
         return [1, 0, 0, 0, 1, 0, 0, 0, 1]
@@ -119,7 +119,7 @@ export const mat3 = {
     }
 }
 
-// ── Bezier ────────────────────────────────────────────
+// -- Bezier --------------------------------------------
 export function cubicBezier(t, p0, p1, p2, p3) {
     const mt = 1 - t
     const mt2 = mt * mt
@@ -154,7 +154,7 @@ function _subdivide(p0, p1, p2, p3, tolSq, points) {
     _subdivide(p0123, p123, p23, p3, tolSq, points)
 }
 
-// ── Seeded PRNG (mulberry32) ──────────────────────────
+// -- Seeded PRNG (mulberry32) --------------------------
 export function mulberry32(seed) {
     let s = seed | 0
     return function () {
@@ -165,7 +165,7 @@ export function mulberry32(seed) {
     }
 }
 
-// ── Geometry helpers ──────────────────────────────────
+// -- Geometry helpers ----------------------------------
 export function pointInPolygon(point, vertices) {
     const [px, py] = point
     let inside = false

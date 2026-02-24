@@ -61,7 +61,6 @@ export class StateManager {
         return {
             version: 1,
             puzzle: {
-                name: puzzleConfig.name,
                 url: puzzleConfig.url,
                 type: puzzleConfig.type,
                 seed: puzzleConfig.seed,

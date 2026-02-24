@@ -63,7 +63,7 @@ for (const { dir, file } of localFiles) {
     if (citedUrls.has(url)) continue
     const stem = basename(file, extname(file))
     const thumbnail = `${baseUrl}thumbs/${stem}.png`
-    newEntries.push({ name: stem, url, thumbnail })
+    newEntries.push({ url, thumbnail })
     console.log(`  + ${url}`)
 }
 
@@ -76,7 +76,7 @@ if (newEntries.length === 0) {
 const all = [...presets, ...newEntries]
 
 function serializePreset(p) {
-    const props = [`        name: ${JSON.stringify(p.name)}`, `        url: ${JSON.stringify(p.url)}`]
+    const props = [`        url: ${JSON.stringify(p.url)}`]
     if (p.thumbnail) props.push(`        thumbnail: ${JSON.stringify(p.thumbnail)}`)
     return `    {\n${props.join(",\n")}\n    }`
 }

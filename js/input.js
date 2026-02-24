@@ -64,7 +64,7 @@ export class InputManager {
         return [e.clientX - rect.left, e.clientY - rect.top]
     }
 
-    // ── Mouse down ────────────────────────────────────
+    // -- Mouse down ------------------------------------
 
     _onMouseDown(e) {
         if (this.app.dialogOpen) return
@@ -119,7 +119,7 @@ export class InputManager {
         }
     }
 
-    // ── Mouse move ────────────────────────────────────
+    // -- Mouse move ------------------------------------
 
     _onMouseMove(e) {
         const [sx, sy] = this._getMousePos(e)
@@ -160,7 +160,7 @@ export class InputManager {
         }
     }
 
-    // ── Mouse up ──────────────────────────────────────
+    // -- Mouse up --------------------------------------
 
     _onMouseUp(e) {
         switch (this.state) {
@@ -186,7 +186,7 @@ export class InputManager {
         }
     }
 
-    // ── Click (for HOLDING_CLICK drop) ────────────────
+    // -- Click (for HOLDING_CLICK drop) ----------------
 
     _onClick(_e) {
         if (this.state === HOLDING_CLICK) {
@@ -204,7 +204,7 @@ export class InputManager {
         }
     }
 
-    // ── Pickup ────────────────────────────────────────
+    // -- Pickup ----------------------------------------
 
     _pickupChunk(hit, worldPos) {
         const chunk = this.cm.chunks.get(hit.chunkId)
@@ -263,7 +263,7 @@ export class InputManager {
         }
     }
 
-    // ── Rotation ──────────────────────────────────────
+    // -- Rotation --------------------------------------
 
     _rotateHeld() {
         const [wx, wy] = this.renderer.screenToWorld(...this.mouseScreen)
@@ -315,7 +315,7 @@ export class InputManager {
         this.app.markDirty()
     }
 
-    // ── Selection rectangle ───────────────────────────
+    // -- Selection rectangle ---------------------------
 
     _finishSelection() {
         const piecesInRect = this.cm.getPiecesInRect(this.selStart[0], this.selStart[1], this.selEnd[0], this.selEnd[1])
@@ -352,7 +352,7 @@ export class InputManager {
         this.app.markDirty()
     }
 
-    // ── Keyboard ──────────────────────────────────────
+    // -- Keyboard --------------------------------------
 
     _onKeyDown(e) {
         if (this.app.dialogOpen) {
@@ -369,9 +369,11 @@ export class InputManager {
             case "f":
                 this.app.toggleFullscreen()
                 break
+            case " ":
+                this._rotateHeld()
+                break
             case "o":
             case "s":
-            case " ":
                 this.app.toggleSolution()
                 break
             case "m":
@@ -396,7 +398,7 @@ export class InputManager {
         }
     }
 
-    // ── Wheel (zoom) ──────────────────────────────────
+    // -- Wheel (zoom) ----------------------------------
 
     _onWheel(e) {
         e.preventDefault()
@@ -406,7 +408,7 @@ export class InputManager {
         this.app.markDirty()
     }
 
-    // ── Getters for rendering ─────────────────────────
+    // -- Getters for rendering -------------------------
 
     get isSelecting() {
         return this.state === SELECTING && this.selStart && this.selEnd

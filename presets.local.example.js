@@ -2,17 +2,16 @@
 // presets.local.js is gitignored so your customizations won't be committed.
 //
 // Export a default array of preset objects. Each preset needs:
-//   name: string       - Display name in the picker
 //   url: string        - Image or video URL (type is auto-detected from extension)
 //   thumbnail?: string - Optional thumbnail URL (falls back to placeholder)
+//
+// URLs can be relative to the location of presets.local.js (the project root).
 
 export default [
     {
-        name: "My Custom Puzzle",
         url: "https://example.com/my-image.jpg"
     }
     // {
-    //     name: "My Video Puzzle",
     //     url: "https://example.com/my-video.mp4"
     // }
 ]

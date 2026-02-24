@@ -18,6 +18,8 @@
                 <button id="btn-share" title="Copy share link">Share</button>
                 <button id="btn-help" title="Help (H)">Help</button>
                 <span id="puzzle-dims" style="display: none"></span>
+                <span id="challenge-indicator" style="display: none"></span>
+                <button id="btn-challenge-next" style="display: none">Next Puzzle</button>
             </div>
             <div id="toolbar-right">
                 <div id="audio-controls" style="display: none">
@@ -118,6 +120,28 @@
             </table>
             <div class="dialog-buttons">
                 <button id="btn-close-help">Close</button>
+            </div>
+        </div>
+
+        <div id="dialog-challenge-start" class="dialog hidden">
+            <h2>Challenge Mode</h2>
+            <p id="challenge-description"></p>
+            <div id="challenge-options">
+                <label
+                    >Piece size:
+                    <select id="challenge-piecesize-select">
+                        <option value="4">Large</option>
+                        <option value="7" selected>Medium</option>
+                        <option value="11">Small</option>
+                        <option value="18">Tiny</option>
+                    </select>
+                </label>
+                <label> <input type="checkbox" id="challenge-rotation-checkbox" checked /> Shuffle rotation </label>
+            </div>
+            <p id="challenge-warning" class="hidden" style="color: #ff6b6b">Starting will replace your current puzzle.</p>
+            <div class="dialog-buttons">
+                <button id="btn-challenge-begin">Begin Challenge</button>
+                <button id="btn-challenge-cancel">Cancel</button>
             </div>
         </div>
 

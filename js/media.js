@@ -1,4 +1,4 @@
-// ── Media type detection ──────────────────────────────
+// -- Media type detection ------------------------------
 
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov"]
 
@@ -10,7 +10,7 @@ export function detectMediaType(url) {
     return "image"
 }
 
-// ── Image loading ─────────────────────────────────────
+// -- Image loading -------------------------------------
 
 export function loadImage(url) {
     return new Promise((resolve, reject) => {
@@ -22,7 +22,7 @@ export function loadImage(url) {
     })
 }
 
-// ── Video loading ─────────────────────────────────────
+// -- Video loading -------------------------------------
 
 export function loadVideo(url) {
     return new Promise((resolve, reject) => {
@@ -52,7 +52,7 @@ export function loadVideo(url) {
     })
 }
 
-// ── Media manager ─────────────────────────────────────
+// -- Media manager -------------------------------------
 
 export class MediaManager {
     constructor(renderer) {

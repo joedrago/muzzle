@@ -104,6 +104,76 @@ body {
     }
 }
 
+/* Challenge indicator & next button */
+#challenge-indicator {
+    color: #ffd93d;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+#btn-challenge-next {
+    background: rgba(76, 175, 80, 0.8) !important;
+    border-color: #4caf50 !important;
+    color: white !important;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+#btn-challenge-next:hover {
+    background: rgba(76, 175, 80, 1) !important;
+}
+
+#challenge-options {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 8px 0;
+}
+
+#challenge-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+#challenge-rotation-checkbox {
+    accent-color: #6c63ff;
+}
+
+#btn-challenge-begin {
+    background: #6c63ff !important;
+    border-color: #6c63ff !important;
+    color: white !important;
+}
+
+#btn-challenge-begin:hover {
+    background: #5a52e0 !important;
+}
+
+.challenge-final-msg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffd93d;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    z-index: 160;
+    pointer-events: none;
+    animation: challenge-fade 10s ease-in-out forwards;
+}
+
+@keyframes challenge-fade {
+    0%,
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
 /* Dialogs */
 #dialog-backdrop {
     position: fixed;
