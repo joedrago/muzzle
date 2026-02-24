@@ -4,7 +4,7 @@ import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
 import { StateManager } from "./state.js"
-import { UIManager, loadLocalPresets, resolveUrl } from "./ui.js"
+import { UIManager, loadLocalPresets, resolveUrl } from "./ui.js?v=2"
 import { mat3 } from "./math-utils.js"
 
 class App {
