@@ -182,4 +182,7 @@ server.listen(PORT, () => {
     console.log(`  ${base}&r=0        (no rotation)`)
     console.log(`  ${base}&ps=4       (large pieces)`)
     console.log(`  ${base}&ps=18&r=0  (tiny pieces, no rotation)`)
+    console.log()
+    console.log(`Or use as a preset gallery instead of a challenge:`)
+    console.log(`  ?p=http://localhost:${PORT}/challenge.json`)
 })
