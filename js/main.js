@@ -4,7 +4,7 @@ import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
 import { StateManager } from "./state.js"
-import { UIManager, loadLocalPresets, resolveUrl } from "./ui.js?v=2"
+import { UIManager, loadLocalPresets, resolveUrl, setPresets } from "./ui.js?v=3"
 import { mat3 } from "./math-utils.js"
 
 class App {
@@ -64,6 +64,28 @@ class App {
     async _init() {
         const presetsChanged = await loadLocalPresets()
         if (presetsChanged) this.ui._buildPresetList()
+
+        // Check for remote presets override (?p=<json-url>)
+        const presetsUrl = new URLSearchParams(window.location.search).get("p")
+        if (presetsUrl) {
+            try {
+                const resp = await fetch(presetsUrl)
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+                const remotePresets = await resp.json()
+                if (Array.isArray(remotePresets) && remotePresets.length > 0) {
+                    setPresets(
+                        remotePresets.map((p) => ({
+                            ...p,
+                            url: resolveUrl(p.url, presetsUrl),
+                            thumbnail: p.thumbnail ? resolveUrl(p.thumbnail, presetsUrl) : p.thumbnail
+                        }))
+                    )
+                    this.ui._buildPresetList()
+                }
+            } catch (e) {
+                console.warn("Failed to load remote presets:", e.message)
+            }
+        }
 
         // Check for challenge mode query params
         const challengeParams = this._parseChallengeParams()

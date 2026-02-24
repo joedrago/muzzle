@@ -32,6 +32,10 @@ const DEFAULT_PRESETS = [
 
 export let PRESETS = DEFAULT_PRESETS
 
+export function setPresets(p) {
+    PRESETS = p
+}
+
 export function resolveUrl(url, baseUrl) {
     if (!url) return url
     try {
