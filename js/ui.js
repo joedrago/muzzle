@@ -242,6 +242,10 @@ export class UIManager {
     }
 
     _hideDialog(dialog) {
+        // Clear gamepad focus within this dialog
+        const focused = dialog.querySelector(".gamepad-focus")
+        if (focused) focused.classList.remove("gamepad-focus")
+
         dialog.classList.add("hidden")
         if (
             this.puzzleDialog.classList.contains("hidden") &&
@@ -303,9 +307,11 @@ export class UIManager {
         // Show relevant control sections based on device capabilities
         const hasTouch = navigator.maxTouchPoints > 0
         const lastType = this.app.input ? this.app.input._lastPointerType : "mouse"
+        const hasGamepad = this.app.gamepad && this.app.gamepad.active
         const mouseSection = document.getElementById("help-mouse-controls")
         const touchSection = document.getElementById("help-touch-controls")
         const kbSection = document.getElementById("help-keyboard-controls")
+        const gamepadSection = document.getElementById("help-gamepad-controls")
 
         if (hasTouch && lastType === "touch") {
             // Touch-primary device
@@ -322,6 +328,11 @@ export class UIManager {
             mouseSection.style.display = ""
             touchSection.style.display = "none"
             kbSection.style.display = ""
+        }
+
+        // Show gamepad section if a gamepad has been used
+        if (gamepadSection) {
+            gamepadSection.style.display = hasGamepad ? "" : "none"
         }
 
         this._showDialog(this.helpDialog)
@@ -529,6 +540,183 @@ export class UIManager {
     hideChallengeUI() {
         this.challengeIndicator.style.display = "none"
         this.btnChallengeNext.style.display = "none"
+    }
+
+    // -- Gamepad dialog focus navigation ----------------
+
+    _getVisibleDialog() {
+        if (!this.puzzleDialog.classList.contains("hidden")) return this.puzzleDialog
+        if (!this.confirmDialog.classList.contains("hidden")) return this.confirmDialog
+        if (!this.helpDialog.classList.contains("hidden")) return this.helpDialog
+        if (!this.challengeDialog.classList.contains("hidden")) return this.challengeDialog
+        return null
+    }
+
+    _getFocusableElements(dialog) {
+        if (!dialog) return []
+        const selectors = [
+            ".preset-item",
+            'input[type="radio"]:not(.preset-item input)',
+            'input[type="text"]:not(:disabled)',
+            'input[type="checkbox"]:not(:disabled)',
+            "select:not(:disabled)",
+            "button:not(:disabled)",
+            'input[type="range"]'
+        ]
+        // Get all focusable elements, filter to visible ones
+        const all = Array.from(dialog.querySelectorAll(selectors.join(",")))
+        return all.filter((el) => {
+            // Skip radio inputs inside preset-items (the .preset-item itself is the focusable)
+            if (el.tagName === "INPUT" && el.type === "radio" && el.closest(".preset-item")) return false
+            // Skip hidden elements
+            if (el.offsetParent === null && !el.closest(".preset-item")) return false
+            return true
+        })
+    }
+
+    _getGamepadFocused() {
+        const dialog = this._getVisibleDialog()
+        if (!dialog) return null
+        return dialog.querySelector(".gamepad-focus")
+    }
+
+    moveGamepadFocus(dx, dy, presetOnly = false) {
+        const dialog = this._getVisibleDialog()
+        if (!dialog) return
+
+        const focusable = this._getFocusableElements(dialog)
+        if (focusable.length === 0) return
+
+        const current = this._getGamepadFocused()
+
+        if (presetOnly) {
+            // LB/RB: navigate only preset items
+            const presets = focusable.filter((el) => el.classList.contains("preset-item"))
+            if (presets.length === 0) return
+            const idx = current ? presets.indexOf(current) : -1
+            const next = dy > 0 || dx > 0 ? idx + 1 : idx - 1
+            const clamped = Math.max(0, Math.min(presets.length - 1, next))
+            this._setGamepadFocus(presets[clamped])
+            return
+        }
+
+        if (!current) {
+            // Nothing focused yet -- focus the first element
+            this._setGamepadFocus(focusable[0])
+            return
+        }
+
+        const idx = focusable.indexOf(current)
+        if (idx === -1) {
+            this._setGamepadFocus(focusable[0])
+            return
+        }
+
+        // For preset grid: handle 2D navigation
+        if (current.classList.contains("preset-item") && (dx !== 0 || dy !== 0)) {
+            const presets = focusable.filter((el) => el.classList.contains("preset-item"))
+            const presetIdx = presets.indexOf(current)
+            if (presetIdx !== -1) {
+                // Estimate grid columns from layout
+                const gridCols = this._getPresetGridCols(presets)
+
+                if (dx !== 0) {
+                    const nextPreset = presetIdx + dx
+                    if (nextPreset >= 0 && nextPreset < presets.length) {
+                        this._setGamepadFocus(presets[nextPreset])
+                        return
+                    }
+                }
+                if (dy !== 0) {
+                    const nextPreset = presetIdx + dy * gridCols
+                    if (nextPreset >= 0 && nextPreset < presets.length) {
+                        this._setGamepadFocus(presets[nextPreset])
+                        return
+                    }
+                }
+
+                // If dy and we're at the edge of presets, fall through to move to next element type
+                if (dy > 0) {
+                    // Move to the next non-preset element
+                    const nextNonPreset = focusable.find((el, i) => i > idx && !el.classList.contains("preset-item"))
+                    if (nextNonPreset) {
+                        this._setGamepadFocus(nextNonPreset)
+                        return
+                    }
+                }
+                if (dy < 0) {
+                    // Already at top of presets, nowhere to go
+                    return
+                }
+            }
+        }
+
+        // Linear navigation for non-preset elements
+        let nextIdx
+        if (dy > 0 || dx > 0) {
+            nextIdx = Math.min(focusable.length - 1, idx + 1)
+        } else {
+            nextIdx = Math.max(0, idx - 1)
+        }
+        this._setGamepadFocus(focusable[nextIdx])
+    }
+
+    _getPresetGridCols(presets) {
+        if (presets.length < 2) return 1
+        // Detect columns by comparing Y positions
+        const y0 = presets[0].getBoundingClientRect().top
+        for (let i = 1; i < presets.length; i++) {
+            if (presets[i].getBoundingClientRect().top > y0 + 5) return i
+        }
+        return presets.length // all on one row
+    }
+
+    _setGamepadFocus(el) {
+        // Remove previous focus
+        const prev = this._getGamepadFocused()
+        if (prev) prev.classList.remove("gamepad-focus")
+
+        if (el) {
+            el.classList.add("gamepad-focus")
+            el.scrollIntoView({ block: "nearest", behavior: "smooth" })
+        }
+    }
+
+    activateGamepadFocus() {
+        const focused = this._getGamepadFocused()
+        if (!focused) return
+
+        if (focused.classList.contains("preset-item")) {
+            // Simulate clicking the preset item
+            focused.click()
+            return
+        }
+
+        if (focused.tagName === "BUTTON") {
+            focused.click()
+            return
+        }
+
+        if (focused.tagName === "INPUT") {
+            if (focused.type === "checkbox") {
+                focused.checked = !focused.checked
+                focused.dispatchEvent(new Event("change", { bubbles: true }))
+                return
+            }
+            if (focused.type === "radio") {
+                focused.checked = true
+                focused.dispatchEvent(new Event("change", { bubbles: true }))
+                return
+            }
+        }
+
+        if (focused.tagName === "SELECT") {
+            // Cycle through options
+            const select = focused
+            select.selectedIndex = (select.selectedIndex + 1) % select.options.length
+            select.dispatchEvent(new Event("change", { bubbles: true }))
+            return
+        }
     }
 
     showChallengeFinalCelebration() {

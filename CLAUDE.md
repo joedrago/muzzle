@@ -9,10 +9,11 @@ Static zero-build-tool web app for playing jigsaw puzzles in WebGL. Special feat
 ```
 muzzle/
 ├── index.html              # Single page entry point, canvas + toolbar + dialogs
-├── style.css               # UI styling (toolbar, dialogs, overlays, celebration)
+├── style.css               # UI styling (toolbar, dialogs, overlays, celebration, gamepad focus)
 ├── CLAUDE.md               # This file
-├── package.json            # type:module, prettier config, eslint/prettier devDeps
+├── package.json            # type:module, prettier config, eslint/prettier/electron devDeps
 ├── eslint.config.js        # ESLint flat config (recommended + no-unused-vars)
+├── forge.config.js         # Electron Forge packaging config
 ├── js/
 │   ├── main.js             # App bootstrap, render loop, module wiring
 │   ├── math-utils.js       # vec2, mat3 (column-major), bezier, seeded PRNG, geometry
@@ -20,9 +21,14 @@ muzzle/
 │   ├── piece.js            # Chunk/ChunkManager classes, snap detection, merge, hit test
 │   ├── renderer.js         # WebGL1 context, shaders (piece+flat), camera, draw pipeline
 │   ├── input.js            # Mouse/keyboard state machine (IDLE/HOLDING/SELECTING/PANNING)
+│   ├── gamepad.js          # Gamepad polling, navigation/holding/dialog modes, button mapping
 │   ├── media.js            # Image/video loading, texture management, auto-detection
 │   ├── state.js            # localStorage auto-save/load with 1.5s debounce
-│   └── ui.js               # Toolbar, dialogs, puzzle picker, celebration confetti
+│   └── ui.js               # Toolbar, dialogs, puzzle picker, celebration, gamepad focus nav
+├── electron/
+│   ├── main.cjs            # Electron main process — fullscreen BrowserWindow loading prod URL
+│   ├── config.json         # gitignored — { "endpoint": "https://..." }
+│   └── config.json.example # Template for config.json
 └── lib/
     └── earcut.js           # Vendored earcut v3.0.1 triangulation library (ESM)
 ```
@@ -75,8 +81,29 @@ muzzle/
 - IDLE → PANNING (right drag on background)
 - Right-click while holding rotates 90° CW
 - Selection rectangle gathers pieces, creates multi-selection
-- Keyboard: R=rotate, O/S=solution, M=mute, F=fullscreen, H/?=help, Esc=cancel
+- Keyboard: R=rotate, O/S=solution, M=mute, F=fullscreen, H/?=help, Esc=cancel/quit
 - Scroll wheel: zoom at cursor
+- Escape in IDLE with no dialog: calls `window.close()` (no-op in browser, quits Electron)
+
+### Gamepad System (gamepad.js)
+
+- Polls `navigator.getGamepads()` every frame via render loop
+- Button edge detection (justPressed vs isPressed) for clean single-fire events
+- Dead zone (0.2) on analog sticks
+- **Three modes**: Navigation (no piece held), Holding (piece held), Dialog (UI open)
+- **Navigation mode**: D-pad/left stick highlights nearest chunk in direction (cone-based search)
+    - A picks up highlighted chunk, B quits, X rotates in place, Y toggles solution
+    - Start opens puzzle select, Select toggles help
+- **Holding mode**: D-pad accelerates (800 u/s², max 1200 u/s), analog stick proportional (1400 u/s max)
+    - Camera auto-follows held piece with smooth lerp
+    - A places piece (triggers snap), B cancels (returns to pre-pickup position), X rotates
+    - Instant stop on d-pad release for precision
+- **Dialog mode**: D-pad/left stick navigates focusable elements, A activates, B cancels
+    - 2D grid navigation for preset thumbnails, linear navigation for other elements
+    - LB/RB quick-navigate through preset list
+- Quit combo: Hold Start+Select for 500ms → `window.close()`
+- Right stick always pans camera, LB/RB zoom (when not in dialog)
+- Clears highlight when mouse/touch input is detected
 
 ### Media (media.js)
 
@@ -102,10 +129,8 @@ muzzle/
 
 ## Known Issues / TODO
 
-- No touch event support (desktop only)
 - Solution overlay doesn't account for tab overhang beyond piece bounds
 - No spatial indexing for hit testing (may slow down beyond ~400 pieces)
-- Needs browser testing — app has never been loaded in a browser yet
 - Preset puzzle URLs are all images; no video presets yet
 
 ## Testing

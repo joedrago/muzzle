@@ -467,6 +467,25 @@ body {
     background: rgba(108, 99, 255, 0.5);
 }
 
+/* Gamepad focus highlight */
+.gamepad-focus {
+    outline: 3px solid #ffda2d !important;
+    outline-offset: 2px;
+    box-shadow: 0 0 12px rgba(255, 218, 45, 0.5) !important;
+    position: relative;
+    z-index: 1;
+}
+
+.preset-item.gamepad-focus {
+    border-color: #ffda2d !important;
+    box-shadow: 0 0 16px rgba(255, 218, 45, 0.6) !important;
+}
+
+.dialog-buttons button.gamepad-focus {
+    background: rgba(255, 218, 45, 0.25) !important;
+    border-color: #ffda2d !important;
+}
+
 /* Hidden utility */
 .hidden {
     display: none !important;

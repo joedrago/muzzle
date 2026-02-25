@@ -3,6 +3,7 @@ import { MediaManager, detectMediaType } from "./media.js"
 import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
+import { GamepadManager } from "./gamepad.js"
 import { StateManager } from "./state.js"
 import { UIManager, loadLocalPresets, resolveUrl, setPresets } from "./ui.js?v=5"
 import { mat3 } from "./math-utils.js"
@@ -16,6 +17,7 @@ class App {
         this.state = new StateManager()
         this.ui = new UIManager(this)
         this.input = null // created after puzzle loads
+        this.gamepad = new GamepadManager(this)
 
         this.puzzleData = null
         this.puzzleConfig = null
@@ -424,8 +426,17 @@ class App {
 
     _startRenderLoop() {
         if (this._animFrame) return
+        this._lastFrameTime = performance.now()
         const loop = () => {
             this._animFrame = requestAnimationFrame(loop)
+            const now = performance.now()
+            const dt = Math.min((now - this._lastFrameTime) / 1000, 0.1) // cap at 100ms
+            this._lastFrameTime = now
+
+            // Poll gamepad
+            const gamepadActive = this.gamepad.poll(dt)
+            if (gamepadActive) this._needsRender = true
+
             this._render()
         }
         loop()
@@ -452,18 +463,11 @@ class App {
         const ph = this.puzzleData.pieceH
 
         // Draw all chunks
-        const heldId = this.input ? this.input.heldChunkId : null
         const heldIds = this.input ? this.input.heldChunkIds : null
-
-        const isHeld = (id) => {
-            if (id === heldId) return true
-            if (heldIds && heldIds.includes(id)) return true
-            return false
-        }
 
         // Draw non-held chunks first, then held chunks on top
         for (const chunk of this.cm.chunks.values()) {
-            if (isHeld(chunk.id)) continue
+            if (this._isChunkHeld(chunk.id)) continue
             this._drawChunk(chunk, texture, pw, ph, 1.0, 0.0)
         }
 
@@ -471,8 +475,22 @@ class App {
         // Multi-selected chunks get a blue highlight tint
         const multiHighlight = heldIds && heldIds.length > 0 ? 0.2 : 0.0
         for (const chunk of this.cm.chunks.values()) {
-            if (!isHeld(chunk.id)) continue
+            if (!this._isChunkHeld(chunk.id)) continue
             this._drawChunk(chunk, texture, pw, ph, 0.85, multiHighlight)
+        }
+
+        // Gamepad highlight glow on focused chunk
+        if (
+            this.gamepad.active &&
+            this.gamepad.highlightedChunkId !== null &&
+            !this._isChunkHeld(this.gamepad.highlightedChunkId)
+        ) {
+            const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
+            if (hlChunk) {
+                // Pulsing glow: oscillate alpha between 0.5 and 1.0
+                const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 300)
+                this._drawChunkHighlight(hlChunk, pw, ph, [1.0, 0.85, 0.2, pulse])
+            }
         }
 
         // Selection rectangle
@@ -503,6 +521,25 @@ class App {
             const puzzleH = this.puzzleData.puzzleHeight
             // Center the overlay at the origin so it's visible after cleanup or at start
             r.drawSolutionOverlay(texture, -puzzleW / 2, -puzzleH / 2, puzzleW, puzzleH, 0.25)
+        }
+    }
+
+    _isChunkHeld(id) {
+        if (!this.input) return false
+        if (id === this.input.heldChunkId) return true
+        if (this.input.heldChunkIds && this.input.heldChunkIds.includes(id)) return true
+        return false
+    }
+
+    _drawChunkHighlight(chunk, pw, ph, color) {
+        const worldMatrix = chunk.worldMatrix
+        for (const pieceId of chunk.pieces) {
+            const piece = this.puzzleData.pieces[pieceId]
+            const pieceOffsetX = piece.col * pw
+            const pieceOffsetY = piece.row * ph
+            const pieceTranslate = mat3.translate(pieceOffsetX, pieceOffsetY)
+            const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
+            this.renderer.drawPieceHighlight(piece.outlineVBO, piece.outlineVertCount, modelMatrix, color)
         }
     }
 

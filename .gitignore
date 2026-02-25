@@ -6,3 +6,5 @@ presets.local.js
 images/
 videos/
 thumbs/
+electron/config.json
+out/

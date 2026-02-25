@@ -2,7 +2,7 @@
     "name": "muzzle",
     "version": "1.0.0",
     "description": "",
-    "main": "index.js",
+    "main": "electron/main.cjs",
     "directories": {
         "lib": "lib"
     },
@@ -11,7 +11,9 @@
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
         "thumbs": "node scripts/thumbs.js",
-        "presets": "node scripts/presets.js"
+        "presets": "node scripts/presets.js",
+        "electron": "electron electron/main.cjs",
+        "make": "electron-forge make"
     },
     "keywords": [],
     "author": "",
@@ -24,7 +26,13 @@
         "semi": false
     },
     "devDependencies": {
+        "@electron-forge/cli": "^7.10.2",
+        "@electron-forge/maker-deb": "^7.10.2",
+        "@electron-forge/maker-rpm": "^7.10.2",
+        "@electron-forge/maker-squirrel": "^7.10.2",
+        "@electron-forge/maker-zip": "^7.10.2",
         "@eslint/js": "^10.0.1",
+        "electron": "^39.2.6",
         "eslint": "^10.0.0",
         "globals": "^17.3.0",
         "prettier": "^3.8.1"

@@ -121,6 +121,11 @@ export class InputManager {
         if (e.pointerType === "touch") e.preventDefault()
 
         this._lastPointerType = e.pointerType
+
+        // Clear gamepad highlight when mouse/touch takes over
+        if (this.app.gamepad) {
+            this.app.gamepad.highlightedChunkId = null
+        }
         const [sx, sy] = this._getPos(e)
         this._pointers.set(e.pointerId, { sx, sy })
 
@@ -677,6 +682,9 @@ export class InputManager {
                     this.state = IDLE
                     this.app.markDirty()
                     this._updateFAB()
+                } else {
+                    // Nothing to cancel — close the window (no-op in browser, quits Electron)
+                    window.close()
                 }
                 break
         }
