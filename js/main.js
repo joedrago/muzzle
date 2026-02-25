@@ -651,8 +651,10 @@ class App {
 
 const _app = new App()
 
-// -- Service Worker Registration -----------------------
+// -- Unregister any lingering service workers ----------
 
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {})
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((r) => r.unregister())
+    })
 }
