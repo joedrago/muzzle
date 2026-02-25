@@ -400,10 +400,10 @@ export class GamepadManager {
             this._dpadVelocity = [0, 0]
         }
 
-        // Analog stick: proportional velocity with quadratic response curve
+        // Analog stick: proportional velocity with cubic response curve
         // This makes small inputs very slow for precision, full tilt = full speed
         const analogMag = Math.sqrt(lx * lx + ly * ly)
-        const analogScale = analogMag > 0 ? (analogMag * analogMag) / analogMag : 0 // mag^2 / mag = mag (quadratic)
+        const analogScale = analogMag * analogMag * analogMag // cubic: mag^3
         const analogVelX = analogMag > 0 ? (lx / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
         const analogVelY = analogMag > 0 ? (ly / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
 
