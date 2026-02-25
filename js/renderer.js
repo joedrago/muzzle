@@ -316,7 +316,7 @@ export class Renderer {
 
     // Draw solution overlay (full puzzle quad)
     // Draw a highlight glow around piece outlines (for gamepad focus)
-    drawPieceHighlight(outlineVBO, vertexCount, modelMatrix, color, thickness = 3) {
+    drawPieceHighlight(outlineVBO, vertexCount, modelMatrix, color, thickness = 5) {
         const gl = this.gl
         const locs = this.flatLocs
         const cam = this.getCameraMatrix()
@@ -326,9 +326,10 @@ export class Renderer {
         gl.uniformMatrix3fv(locs.u_camera, false, cam)
 
         const passes = [
-            { scale: 1 + thickness * 0.012, alpha: 0.15 },
-            { scale: 1 + thickness * 0.007, alpha: 0.3 },
-            { scale: 1 + thickness * 0.003, alpha: 0.6 }
+            { scale: 1 + thickness * 0.018, alpha: 0.12 },
+            { scale: 1 + thickness * 0.013, alpha: 0.25 },
+            { scale: 1 + thickness * 0.008, alpha: 0.45 },
+            { scale: 1 + thickness * 0.004, alpha: 0.7 }
         ]
 
         for (const pass of passes) {

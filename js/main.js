@@ -487,9 +487,9 @@ class App {
         ) {
             const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
             if (hlChunk) {
-                // Pulsing glow: oscillate alpha between 0.5 and 1.0
-                const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 300)
-                this._drawChunkHighlight(hlChunk, pw, ph, [1.0, 0.85, 0.2, pulse])
+                // Pulsing glow: oscillate alpha between 0.6 and 1.0
+                const pulse = 0.8 + 0.2 * Math.sin(performance.now() / 300)
+                this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
             }
         }
 

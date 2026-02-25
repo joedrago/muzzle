@@ -27,8 +27,6 @@ const ANALOG_MAX_SPEED = 1400 // world units/sec at full tilt
 const CAMERA_PAN_SPEED = 800 // world units/sec for right stick camera pan
 const ZOOM_SPEED = 2.0 // zoom multiplier per second
 const QUIT_HOLD_MS = 500 // hold Start+Select for this long to quit
-const CAMERA_FOLLOW_SPEED = 8 // lerp factor per second for camera follow
-
 // Button indices (standard gamepad)
 const BTN_A = 0
 const BTN_B = 1
@@ -114,7 +112,10 @@ export class GamepadManager {
         // Check if any input is active
         const anyInput = this._currButtons.some((b) => b) || this._axes.some((a) => a !== 0)
         if (anyInput) this.active = true
-        if (!this.active) return false
+        if (!this.active) {
+            this.updateLegend()
+            return false
+        }
 
         // Process quit combo (Start + Select held together)
         this._processQuitCombo()
@@ -132,6 +133,9 @@ export class GamepadManager {
         if (!this.app.dialogOpen) {
             this._processCamera(dt)
         }
+
+        // Update the on-screen button legend
+        this.updateLegend()
 
         return anyInput
     }
@@ -420,9 +424,6 @@ export class GamepadManager {
             this.app.markDirty()
         }
 
-        // Camera follows the held piece
-        this._followHeldPiece(chunkId, dt)
-
         // A button: drop/place
         if (this._justPressed(BTN_A)) {
             this._dropHeld()
@@ -438,17 +439,6 @@ export class GamepadManager {
             cm.rotateChunkAroundCenter(chunkId)
             this.app.markDirty()
         }
-    }
-
-    _followHeldPiece(chunkId, dt) {
-        const cm = this.app.cm
-        const renderer = this.app.renderer
-        const center = cm.getChunkWorldCenter(chunkId)
-
-        // Smooth camera follow
-        const t = 1 - Math.exp(-CAMERA_FOLLOW_SPEED * dt)
-        renderer.camera.x += (center[0] - renderer.camera.x) * t
-        renderer.camera.y += (center[1] - renderer.camera.y) * t
     }
 
     _dropHeld() {
@@ -575,5 +565,47 @@ export class GamepadManager {
         } else {
             this.app.ui.moveGamepadFocus(0, Math.sign(dy))
         }
+    }
+
+    // -- Button legend ---
+
+    updateLegend() {
+        const el = document.getElementById("gamepad-legend")
+        if (!el) return
+
+        if (!this.active) {
+            el.classList.add("hidden")
+            return
+        }
+
+        el.classList.remove("hidden")
+        const b = (label) => `<span class="legend-btn">${label}</span>`
+
+        let lines
+        if (this.app.dialogOpen) {
+            lines = [`${b("D-pad")} Navigate`, `${b("A")} Select`, `${b("B")} Cancel`, `${b("LB")} ${b("RB")} Prev / Next`]
+        } else if (this._isHolding()) {
+            lines = [
+                `${b("D-pad")} ${b("L")} Move piece`,
+                `${b("A")} Place`,
+                `${b("B")} Cancel`,
+                `${b("X")} Rotate`,
+                `${b("R")} Pan camera`,
+                `${b("LB")} ${b("RB")} Zoom`
+            ]
+        } else {
+            lines = [
+                `${b("D-pad")} ${b("L")} Select piece`,
+                `${b("A")} Pick up`,
+                `${b("X")} Rotate`,
+                `${b("Y")} Solution`,
+                `${b("R")} Pan camera`,
+                `${b("LB")} ${b("RB")} Zoom`,
+                `${b("Start")} New puzzle`,
+                `${b("Sel")} Help`
+            ]
+        }
+
+        el.innerHTML = lines.join("<br>")
     }
 }

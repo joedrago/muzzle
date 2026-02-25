@@ -543,6 +543,12 @@ export class UIManager {
     }
 
     // -- Gamepad dialog focus navigation ----------------
+    //
+    // Elements are organized into "groups" for spatial navigation:
+    //   - Preset grid: 2D navigation (left/right within row, up/down between rows)
+    //   - Everything else: linear up/down list
+    // Down from the last preset row goes to the first non-preset element.
+    // Up from the first non-preset element goes back into the preset grid.
 
     _getVisibleDialog() {
         if (!this.puzzleDialog.classList.contains("hidden")) return this.puzzleDialog
@@ -553,25 +559,21 @@ export class UIManager {
     }
 
     _getFocusableElements(dialog) {
-        if (!dialog) return []
-        const selectors = [
-            ".preset-item",
-            'input[type="radio"]:not(.preset-item input)',
-            'input[type="text"]:not(:disabled)',
-            'input[type="checkbox"]:not(:disabled)',
-            "select:not(:disabled)",
-            "button:not(:disabled)",
-            'input[type="range"]'
-        ]
-        // Get all focusable elements, filter to visible ones
-        const all = Array.from(dialog.querySelectorAll(selectors.join(",")))
-        return all.filter((el) => {
-            // Skip radio inputs inside preset-items (the .preset-item itself is the focusable)
-            if (el.tagName === "INPUT" && el.type === "radio" && el.closest(".preset-item")) return false
-            // Skip hidden elements
-            if (el.offsetParent === null && !el.closest(".preset-item")) return false
+        if (!dialog) return { presets: [], controls: [] }
+        // Preset thumbnails (in the grid)
+        const presets = Array.from(dialog.querySelectorAll(".preset-item"))
+
+        // All other interactive controls in DOM order
+        const controlSelectors = 'select:not(:disabled), input[type="checkbox"]:not(:disabled), button:not(:disabled)'
+        const controls = Array.from(dialog.querySelectorAll(controlSelectors)).filter((el) => {
+            // Skip elements inside preset-items
+            if (el.closest(".preset-item")) return false
+            // Skip truly hidden elements (display:none parents)
+            if (el.offsetParent === null) return false
             return true
         })
+
+        return { presets, controls }
     }
 
     _getGamepadFocused() {
@@ -584,95 +586,94 @@ export class UIManager {
         const dialog = this._getVisibleDialog()
         if (!dialog) return
 
-        const focusable = this._getFocusableElements(dialog)
-        if (focusable.length === 0) return
+        const { presets, controls } = this._getFocusableElements(dialog)
+        const allElements = [...presets, ...controls]
+        if (allElements.length === 0) return
 
         const current = this._getGamepadFocused()
 
+        if (!current) {
+            // Nothing focused yet -- focus the first preset or first control
+            this._setGamepadFocus(allElements[0])
+            return
+        }
+
+        const isPreset = current.classList.contains("preset-item")
+        const presetIdx = isPreset ? presets.indexOf(current) : -1
+        const controlIdx = !isPreset ? controls.indexOf(current) : -1
+
         if (presetOnly) {
             // LB/RB: navigate only preset items
-            const presets = focusable.filter((el) => el.classList.contains("preset-item"))
             if (presets.length === 0) return
-            const idx = current ? presets.indexOf(current) : -1
+            const idx = presetIdx >= 0 ? presetIdx : 0
             const next = dy > 0 || dx > 0 ? idx + 1 : idx - 1
             const clamped = Math.max(0, Math.min(presets.length - 1, next))
             this._setGamepadFocus(presets[clamped])
             return
         }
 
-        if (!current) {
-            // Nothing focused yet -- focus the first element
-            this._setGamepadFocus(focusable[0])
-            return
-        }
+        // -- Currently on a preset item --
+        if (isPreset && presetIdx !== -1) {
+            const gridCols = this._getPresetGridCols(presets)
 
-        const idx = focusable.indexOf(current)
-        if (idx === -1) {
-            this._setGamepadFocus(focusable[0])
-            return
-        }
-
-        // For preset grid: handle 2D navigation
-        if (current.classList.contains("preset-item") && (dx !== 0 || dy !== 0)) {
-            const presets = focusable.filter((el) => el.classList.contains("preset-item"))
-            const presetIdx = presets.indexOf(current)
-            if (presetIdx !== -1) {
-                // Estimate grid columns from layout
-                const gridCols = this._getPresetGridCols(presets)
-
-                if (dx !== 0) {
-                    const nextPreset = presetIdx + dx
-                    if (nextPreset >= 0 && nextPreset < presets.length) {
-                        this._setGamepadFocus(presets[nextPreset])
-                        return
-                    }
+            // Left/right within the grid
+            if (dx !== 0) {
+                const next = presetIdx + dx
+                if (next >= 0 && next < presets.length) {
+                    this._setGamepadFocus(presets[next])
                 }
-                if (dy !== 0) {
-                    const nextPreset = presetIdx + dy * gridCols
-                    if (nextPreset >= 0 && nextPreset < presets.length) {
-                        this._setGamepadFocus(presets[nextPreset])
-                        return
-                    }
-                }
+                return
+            }
 
-                // If dy and we're at the edge of presets, fall through to move to next element type
-                if (dy > 0) {
-                    // Move to the next non-preset element
-                    const nextNonPreset = focusable.find((el, i) => i > idx && !el.classList.contains("preset-item"))
-                    if (nextNonPreset) {
-                        this._setGamepadFocus(nextNonPreset)
-                        return
-                    }
-                }
-                if (dy < 0) {
-                    // Already at top of presets, nowhere to go
+            // Up/down within the grid
+            if (dy !== 0) {
+                const nextPreset = presetIdx + dy * gridCols
+                if (nextPreset >= 0 && nextPreset < presets.length) {
+                    this._setGamepadFocus(presets[nextPreset])
                     return
                 }
+                // Past the bottom of the preset grid: go to first control
+                if (dy > 0 && controls.length > 0) {
+                    this._setGamepadFocus(controls[0])
+                    return
+                }
+                // Past the top: stay put
+                return
             }
+            return
         }
 
-        // Linear navigation for non-preset elements
-        let nextIdx
-        if (dy > 0 || dx > 0) {
-            nextIdx = Math.min(focusable.length - 1, idx + 1)
-        } else {
-            nextIdx = Math.max(0, idx - 1)
+        // -- Currently on a control element --
+        if (controlIdx !== -1) {
+            if (dy < 0 || dx < 0) {
+                if (controlIdx > 0) {
+                    this._setGamepadFocus(controls[controlIdx - 1])
+                } else if (presets.length > 0) {
+                    // Go back to last preset
+                    this._setGamepadFocus(presets[presets.length - 1])
+                }
+            } else if (dy > 0 || dx > 0) {
+                if (controlIdx < controls.length - 1) {
+                    this._setGamepadFocus(controls[controlIdx + 1])
+                }
+            }
+            return
         }
-        this._setGamepadFocus(focusable[nextIdx])
+
+        // Fallback: go to first element
+        this._setGamepadFocus(allElements[0])
     }
 
     _getPresetGridCols(presets) {
         if (presets.length < 2) return 1
-        // Detect columns by comparing Y positions
         const y0 = presets[0].getBoundingClientRect().top
         for (let i = 1; i < presets.length; i++) {
             if (presets[i].getBoundingClientRect().top > y0 + 5) return i
         }
-        return presets.length // all on one row
+        return presets.length
     }
 
     _setGamepadFocus(el) {
-        // Remove previous focus
         const prev = this._getGamepadFocused()
         if (prev) prev.classList.remove("gamepad-focus")
 
@@ -687,7 +688,6 @@ export class UIManager {
         if (!focused) return
 
         if (focused.classList.contains("preset-item")) {
-            // Simulate clicking the preset item
             focused.click()
             return
         }

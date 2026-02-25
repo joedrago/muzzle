@@ -486,6 +486,38 @@ body {
     border-color: #ffda2d !important;
 }
 
+/* Gamepad button legend */
+#gamepad-legend {
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: max(12px, env(safe-area-inset-right));
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    z-index: 105;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #ccc;
+    pointer-events: none;
+    max-width: 220px;
+}
+
+#gamepad-legend .legend-btn {
+    display: inline-block;
+    min-width: 18px;
+    text-align: center;
+    padding: 1px 5px;
+    margin-right: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    font-weight: 600;
+    color: #e0e0e0;
+    font-size: 11px;
+}
+
 /* Hidden utility */
 .hidden {
     display: none !important;
