@@ -22,7 +22,7 @@ export default [
         languageOptions: { globals: globals.node }
     },
     {
-        files: ["electron/**/*.{js,cjs}", "forge.config.js"],
+        files: ["electron/**/*.{js,cjs}", "forge.config.cjs"],
         languageOptions: { globals: globals.node, sourceType: "commonjs" }
     }
 ]
