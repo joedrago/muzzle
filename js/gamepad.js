@@ -250,9 +250,9 @@ export class GamepadManager {
             this.app.ui.showPuzzleSelect()
         }
 
-        // Select: toggle help
+        // Select: cleanup (no confirmation)
         if (this._justPressed(BTN_SELECT)) {
-            this.app.toggleHelp()
+            this.app.cleanup(true)
         }
     }
 
@@ -605,7 +605,7 @@ export class GamepadManager {
                 `${b("R")} Pan camera`,
                 `${b("LB")} ${b("RB")} Zoom`,
                 `${b("Start")} New puzzle`,
-                `${b("Sel")} Help`
+                `${b("Sel")} Cleanup`
             ]
         }
 
