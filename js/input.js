@@ -97,7 +97,7 @@ export class InputManager {
         // mousedown catches right-click while left button is held (pointerdown doesn't fire for
         // additional buttons when one is already pressed)
         this.canvas.addEventListener("mousedown", (e) => {
-            if (e.button === 2 && (this.state === HOLDING_CLICK || this.state === HOLDING_DRAG)) {
+            if (e.button === 2 && this.state === HOLDING_DRAG) {
                 this._rotateHeld()
             }
         })
