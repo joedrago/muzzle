@@ -18,7 +18,7 @@
 //
 // Axes: leftStick [0,1], rightStick [2,3]
 
-const DEAD_ZONE = 0.2
+const DEAD_ZONE = 0.1
 const NAV_REPEAT_DELAY = 400 // ms before first repeat
 const NAV_REPEAT_RATE = 120 // ms between repeats
 const DPAD_ACCEL = 800 // world units/sec^2 for d-pad movement
@@ -400,9 +400,12 @@ export class GamepadManager {
             this._dpadVelocity = [0, 0]
         }
 
-        // Analog stick: proportional velocity
-        const analogVelX = lx * ANALOG_MAX_SPEED
-        const analogVelY = ly * ANALOG_MAX_SPEED
+        // Analog stick: proportional velocity with quadratic response curve
+        // This makes small inputs very slow for precision, full tilt = full speed
+        const analogMag = Math.sqrt(lx * lx + ly * ly)
+        const analogScale = analogMag > 0 ? (analogMag * analogMag) / analogMag : 0 // mag^2 / mag = mag (quadratic)
+        const analogVelX = analogMag > 0 ? (lx / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
+        const analogVelY = analogMag > 0 ? (ly / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
 
         // Combine: use whichever has greater magnitude
         let moveX, moveY

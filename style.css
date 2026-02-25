@@ -502,6 +502,7 @@ body {
     color: #ccc;
     pointer-events: none;
     max-width: 220px;
+    opacity: 0.5;
 }
 
 #gamepad-legend .legend-btn {

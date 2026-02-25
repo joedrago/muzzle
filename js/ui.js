@@ -616,12 +616,12 @@ export class UIManager {
         if (isPreset && presetIdx !== -1) {
             const gridCols = this._getPresetGridCols(presets)
 
-            // Left/right within the grid
+            // Left/right within the grid (wrap within row)
             if (dx !== 0) {
-                const next = presetIdx + dx
-                if (next >= 0 && next < presets.length) {
-                    this._setGamepadFocus(presets[next])
-                }
+                let next = presetIdx + dx
+                if (next < 0) next = presets.length - 1
+                else if (next >= presets.length) next = 0
+                this._setGamepadFocus(presets[next])
                 return
             }
 
@@ -637,8 +637,13 @@ export class UIManager {
                     this._setGamepadFocus(controls[0])
                     return
                 }
-                // Past the top: stay put
-                return
+                // Past the top: wrap to last control (or last preset)
+                if (dy < 0) {
+                    if (controls.length > 0) {
+                        this._setGamepadFocus(controls[controls.length - 1])
+                    }
+                    return
+                }
             }
             return
         }
@@ -655,6 +660,12 @@ export class UIManager {
             } else if (dy > 0 || dx > 0) {
                 if (controlIdx < controls.length - 1) {
                     this._setGamepadFocus(controls[controlIdx + 1])
+                } else if (presets.length > 0) {
+                    // Wrap to first preset
+                    this._setGamepadFocus(presets[0])
+                } else {
+                    // Wrap to first control
+                    this._setGamepadFocus(controls[0])
                 }
             }
             return

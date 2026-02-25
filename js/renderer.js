@@ -315,36 +315,23 @@ export class Renderer {
     }
 
     // Draw solution overlay (full puzzle quad)
-    // Draw a highlight glow around piece outlines (for gamepad focus)
-    drawPieceHighlight(outlineVBO, vertexCount, modelMatrix, color, thickness = 5) {
+    // Draw a highlight outline around a piece (for gamepad focus / held indicator)
+    drawPieceHighlight(outlineVBO, vertexCount, modelMatrix, color) {
         const gl = this.gl
         const locs = this.flatLocs
         const cam = this.getCameraMatrix()
 
-        // Draw the outline multiple times at slightly different scales for a glow effect
         gl.useProgram(this.flatProgram)
         gl.uniformMatrix3fv(locs.u_camera, false, cam)
+        gl.uniformMatrix3fv(locs.u_model, false, modelMatrix)
+        gl.uniform4fv(locs.u_color, color)
 
-        const passes = [
-            { scale: 1 + thickness * 0.018, alpha: 0.12 },
-            { scale: 1 + thickness * 0.013, alpha: 0.25 },
-            { scale: 1 + thickness * 0.008, alpha: 0.45 },
-            { scale: 1 + thickness * 0.004, alpha: 0.7 }
-        ]
+        gl.bindBuffer(gl.ARRAY_BUFFER, outlineVBO)
+        gl.enableVertexAttribArray(locs.a_position)
+        gl.vertexAttribPointer(locs.a_position, 2, gl.FLOAT, false, 0, 0)
 
-        for (const pass of passes) {
-            const s = pass.scale
-            const scaleModel = mat3.multiply(modelMatrix, mat3.scale(s, s))
-            gl.uniformMatrix3fv(locs.u_model, false, scaleModel)
-            gl.uniform4fv(locs.u_color, [color[0], color[1], color[2], color[3] * pass.alpha])
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, outlineVBO)
-            gl.enableVertexAttribArray(locs.a_position)
-            gl.vertexAttribPointer(locs.a_position, 2, gl.FLOAT, false, 0, 0)
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
-            gl.disableVertexAttribArray(locs.a_position)
-        }
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
+        gl.disableVertexAttribArray(locs.a_position)
     }
 
     drawSolutionOverlay(texture, puzzleX, puzzleY, puzzleW, puzzleH, alpha = 0.35) {

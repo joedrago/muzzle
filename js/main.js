@@ -479,17 +479,23 @@ class App {
             this._drawChunk(chunk, texture, pw, ph, 0.85, multiHighlight)
         }
 
-        // Gamepad highlight glow on focused chunk
-        if (
-            this.gamepad.active &&
-            this.gamepad.highlightedChunkId !== null &&
-            !this._isChunkHeld(this.gamepad.highlightedChunkId)
-        ) {
-            const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
-            if (hlChunk) {
-                // Pulsing glow: oscillate alpha between 0.6 and 1.0
-                const pulse = 0.8 + 0.2 * Math.sin(performance.now() / 300)
-                this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
+        // Gamepad highlights
+        if (this.gamepad.active) {
+            // Green highlight on focused (non-held) chunk
+            if (this.gamepad.highlightedChunkId !== null && !this._isChunkHeld(this.gamepad.highlightedChunkId)) {
+                const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
+                if (hlChunk) {
+                    const pulse = 0.7 + 0.3 * Math.sin(performance.now() / 300)
+                    this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
+                }
+            }
+            // Cyan highlight on held chunk
+            const heldId = this.input ? this.input.heldChunkId : null
+            if (heldId !== null) {
+                const heldChunk = this.cm.chunks.get(heldId)
+                if (heldChunk) {
+                    this._drawChunkHighlight(heldChunk, pw, ph, [0.2, 0.9, 1.0, 0.9])
+                }
             }
         }
 
