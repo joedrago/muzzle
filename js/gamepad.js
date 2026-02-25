@@ -21,9 +21,9 @@
 const DEAD_ZONE = 0.05
 const NAV_REPEAT_DELAY = 400 // ms before first repeat
 const NAV_REPEAT_RATE = 120 // ms between repeats
-const DPAD_ACCEL = 800 // world units/sec^2 for d-pad movement
-const DPAD_MAX_SPEED = 1200 // world units/sec max d-pad speed
-const ANALOG_MAX_SPEED = 1400 // world units/sec at full tilt
+const DPAD_ACCEL = 400 // world units/sec^2 for d-pad movement
+const DPAD_MAX_SPEED = 600 // world units/sec max d-pad speed
+const ANALOG_MAX_SPEED = 700 // world units/sec at full tilt
 const CAMERA_PAN_SPEED = 800 // world units/sec for right stick camera pan
 const ZOOM_SPEED = 2.0 // zoom multiplier per second
 const QUIT_HOLD_MS = 500 // hold Start+Select for this long to quit
@@ -400,10 +400,10 @@ export class GamepadManager {
             this._dpadVelocity = [0, 0]
         }
 
-        // Analog stick: proportional velocity with cubic response curve
-        // This makes small inputs very slow for precision, full tilt = full speed
+        // Analog stick: proportional velocity with quadratic response curve
+        // This makes small inputs slow for precision, full tilt = full speed
         const analogMag = Math.sqrt(lx * lx + ly * ly)
-        const analogScale = analogMag * analogMag * analogMag // cubic: mag^3
+        const analogScale = analogMag * analogMag // quadratic: mag^2
         const analogVelX = analogMag > 0 ? (lx / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
         const analogVelY = analogMag > 0 ? (ly / analogMag) * analogScale * ANALOG_MAX_SPEED : 0
 
