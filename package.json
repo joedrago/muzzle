@@ -1,7 +1,7 @@
 {
     "name": "muzzle",
     "version": "1.0.0",
-    "description": "",
+    "description": "WebGL jigsaw puzzle game",
     "main": "electron/main.cjs",
     "directories": {
         "lib": "lib"
@@ -16,7 +16,7 @@
         "make": "electron-forge make"
     },
     "keywords": [],
-    "author": "",
+    "author": "jdrago",
     "license": "ISC",
     "type": "module",
     "prettier": {
