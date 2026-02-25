@@ -11,9 +11,15 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #1a1a2e;
     color: #e0e0e0;
+}
+
+body {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 #puzzle-canvas {
@@ -37,7 +43,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+    padding-top: env(safe-area-inset-top);
     z-index: 100;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -344,6 +351,8 @@ body {
     background: rgba(0, 0, 0, 0.3);
     color: #e0e0e0;
     font-size: 13px;
+    user-select: auto;
+    -webkit-user-select: auto;
 }
 
 #custom-url-input:disabled {
@@ -467,4 +476,90 @@ body {
 #dialog-confirm p {
     font-size: 15px;
     line-height: 1.5;
+}
+
+/* Rotate FAB (touch devices) */
+#fab-rotate {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(108, 99, 255, 0.85);
+    color: white;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#fab-rotate:active {
+    background: rgba(108, 99, 255, 1);
+    transform: translateX(-50%) scale(0.92);
+}
+
+/* Help dialog sections */
+#dialog-help h3 {
+    font-size: 15px;
+    color: #aaa;
+    margin: 14px 0 6px 0;
+}
+
+#dialog-help h3:first-child {
+    margin-top: 0;
+}
+
+/* Responsive: small screens */
+@media (max-width: 600px) {
+    #toolbar {
+        padding: 0 max(6px, env(safe-area-inset-right)) 0 max(6px, env(safe-area-inset-left));
+        gap: 2px;
+    }
+
+    #toolbar-left,
+    #toolbar-right {
+        gap: 4px;
+    }
+
+    #toolbar button {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    #puzzle-dims {
+        display: none !important;
+    }
+
+    #volume-slider {
+        width: 50px;
+    }
+
+    .dialog {
+        min-width: 0;
+        width: 95vw;
+        padding: 16px;
+    }
+
+    .dialog-buttons button {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+
+    #preset-list {
+        grid-template-columns: repeat(auto-fill, 80px);
+    }
+
+    .preset-item {
+        width: 80px;
+        height: 60px;
+    }
 }

@@ -2,9 +2,18 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+        />
         <title>Muzzle - Jigsaw Puzzle</title>
         <link rel="stylesheet" href="style.css" />
+        <link rel="manifest" href="manifest.json" />
+        <meta name="theme-color" content="#1a1a2e" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Muzzle" />
+        <link rel="apple-touch-icon" href="icons/icon-192.png" />
     </head>
     <body>
         <canvas id="puzzle-canvas"></canvas>
@@ -68,56 +77,93 @@
 
         <div id="dialog-help" class="dialog hidden">
             <h2>Controls</h2>
-            <table>
-                <tr>
-                    <td>Left click</td>
-                    <td>Pick up / drop piece</td>
-                </tr>
-                <tr>
-                    <td>Left drag</td>
-                    <td>Drag piece</td>
-                </tr>
-                <tr>
-                    <td>Right click (while holding)</td>
-                    <td>Rotate 90&deg; CW</td>
-                </tr>
-                <tr>
-                    <td>Right drag (on background)</td>
-                    <td>Pan camera</td>
-                </tr>
-                <tr>
-                    <td>Left drag (on background)</td>
-                    <td>Selection rectangle</td>
-                </tr>
-                <tr>
-                    <td>Scroll wheel</td>
-                    <td>Zoom in/out</td>
-                </tr>
-                <tr>
-                    <td><kbd>R</kbd></td>
-                    <td>Rotate held piece</td>
-                </tr>
-                <tr>
-                    <td><kbd>O</kbd> / <kbd>S</kbd></td>
-                    <td>Toggle solution overlay</td>
-                </tr>
-                <tr>
-                    <td><kbd>M</kbd></td>
-                    <td>Toggle mute</td>
-                </tr>
-                <tr>
-                    <td><kbd>F</kbd></td>
-                    <td>Toggle fullscreen</td>
-                </tr>
-                <tr>
-                    <td><kbd>H</kbd> / <kbd>?</kbd></td>
-                    <td>Toggle help</td>
-                </tr>
-                <tr>
-                    <td><kbd>Esc</kbd></td>
-                    <td>Cancel / close dialog</td>
-                </tr>
-            </table>
+            <div id="help-mouse-controls">
+                <h3>Mouse</h3>
+                <table>
+                    <tr>
+                        <td>Left click</td>
+                        <td>Pick up / drop piece</td>
+                    </tr>
+                    <tr>
+                        <td>Left drag</td>
+                        <td>Drag piece</td>
+                    </tr>
+                    <tr>
+                        <td>Right click (while holding)</td>
+                        <td>Rotate 90&deg; CW</td>
+                    </tr>
+                    <tr>
+                        <td>Right drag (on background)</td>
+                        <td>Pan camera</td>
+                    </tr>
+                    <tr>
+                        <td>Left drag (on background)</td>
+                        <td>Selection rectangle</td>
+                    </tr>
+                    <tr>
+                        <td>Scroll wheel</td>
+                        <td>Zoom in/out</td>
+                    </tr>
+                </table>
+            </div>
+            <div id="help-touch-controls">
+                <h3>Touch</h3>
+                <table>
+                    <tr>
+                        <td>Tap</td>
+                        <td>Pick up / drop piece</td>
+                    </tr>
+                    <tr>
+                        <td>Drag</td>
+                        <td>Move piece / pan camera</td>
+                    </tr>
+                    <tr>
+                        <td>Double-tap</td>
+                        <td>Rotate 90&deg; CW</td>
+                    </tr>
+                    <tr>
+                        <td>Pinch</td>
+                        <td>Zoom in/out</td>
+                    </tr>
+                    <tr>
+                        <td>Long-press (on background)</td>
+                        <td>Selection rectangle</td>
+                    </tr>
+                    <tr>
+                        <td>Rotate button</td>
+                        <td>Rotate held piece</td>
+                    </tr>
+                </table>
+            </div>
+            <div id="help-keyboard-controls">
+                <h3>Keyboard</h3>
+                <table>
+                    <tr>
+                        <td><kbd>R</kbd></td>
+                        <td>Rotate held piece</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>O</kbd> / <kbd>S</kbd></td>
+                        <td>Toggle solution overlay</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>M</kbd></td>
+                        <td>Toggle mute</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>F</kbd></td>
+                        <td>Toggle fullscreen</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>H</kbd> / <kbd>?</kbd></td>
+                        <td>Toggle help</td>
+                    </tr>
+                    <tr>
+                        <td><kbd>Esc</kbd></td>
+                        <td>Cancel / close dialog</td>
+                    </tr>
+                </table>
+            </div>
             <div class="dialog-buttons">
                 <button id="btn-close-help">Close</button>
             </div>
@@ -145,11 +191,13 @@
             </div>
         </div>
 
+        <button id="fab-rotate" class="hidden" aria-label="Rotate piece">&#x21BB;</button>
+
         <div id="celebration-overlay" class="hidden"></div>
         <div id="video-play-overlay" class="hidden">
             <button id="btn-play-video">Click to Start Video</button>
         </div>
 
-        <script type="module" src="js/main.js?v=3"></script>
+        <script type="module" src="js/main.js?v=5"></script>
     </body>
 </html>

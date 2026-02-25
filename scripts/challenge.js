@@ -7,7 +7,8 @@ import { basename, extname, join, resolve } from "node:path"
 
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"])
 const VIDEO_EXTS = new Set([".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"])
-const MEDIA_EXTS = new Set([...IMAGE_EXTS, ...VIDEO_EXTS])
+const GIF_EXT = ".gif"
+const MEDIA_EXTS = new Set([...IMAGE_EXTS, ...VIDEO_EXTS, GIF_EXT])
 
 const MIME_TYPES = {
     ".jpg": "image/jpeg",
@@ -51,6 +52,50 @@ if (files.length === 0) {
     process.exit(1)
 }
 
+// Convert GIFs to silent looping MP4s in muzzlevideos/
+const VIDEO_DIR = "muzzlevideos"
+const hasGifs = files.some((f) => extname(f).toLowerCase() === GIF_EXT)
+if (hasGifs) {
+    const videoDir = join(process.cwd(), VIDEO_DIR)
+    mkdirSync(videoDir, { recursive: true })
+
+    files = files.map((f) => {
+        if (extname(f).toLowerCase() !== GIF_EXT) return f
+        const stem = basename(f, extname(f))
+        const out = join(videoDir, stem + ".mp4")
+
+        if (existsSync(out)) {
+            console.log(`  skipping ${basename(f)} (mp4 exists)`)
+            return out
+        }
+
+        try {
+            execFileSync(
+                "ffmpeg",
+                [
+                    "-i",
+                    f,
+                    "-movflags",
+                    "faststart",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-vf",
+                    "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+                    "-an",
+                    "-y",
+                    out
+                ],
+                { stdio: "pipe" }
+            )
+            console.log(`  ${basename(f)} -> ${VIDEO_DIR}/${stem}.mp4`)
+        } catch (e) {
+            console.error(`  FAILED: ${basename(f)} — ${e.stderr?.toString().trim().split("\n").pop()}`)
+            return f
+        }
+        return out
+    })
+}
+
 // -t flag: generate thumbnails
 if (thumbMode) {
     const thumbDir = join(process.cwd(), THUMB_DIR)
@@ -90,12 +135,15 @@ if (thumbMode) {
     }
 }
 
-// Build challenge JSON with bare filenames as relative URLs
+// Build challenge JSON with relative URLs
+const cwd = process.cwd()
 const presets = files.map((f) => {
-    const entry = { url: basename(f) }
+    // Files in subdirs (muzzlevideos/) get a relative path, others just the filename
+    const rel = f.startsWith(cwd) ? f.slice(cwd.length + 1) : basename(f)
+    const entry = { url: rel }
     if (thumbMode) {
         const stem = basename(f, extname(f))
-        const thumbPath = join(process.cwd(), THUMB_DIR, stem + ".png")
+        const thumbPath = join(cwd, THUMB_DIR, stem + ".png")
         if (existsSync(thumbPath)) {
             entry.thumbnail = `${THUMB_DIR}/${stem}.png`
         }
@@ -111,16 +159,17 @@ if (writeMode) {
     process.exit(0)
 }
 
-// Build filename -> absolute path map for serving (includes thumbs)
+// Build relative-path -> absolute-path map for serving (includes thumbs and converted videos)
 const fileMap = new Map()
 for (const f of files) {
-    fileMap.set(basename(f), f)
+    const rel = f.startsWith(cwd) ? f.slice(cwd.length + 1) : basename(f)
+    fileMap.set(rel, f)
 }
-if (thumbMode) {
-    const thumbDir = join(process.cwd(), THUMB_DIR)
-    if (existsSync(thumbDir)) {
-        for (const f of readdirSync(thumbDir)) {
-            fileMap.set(`${THUMB_DIR}/${f}`, join(thumbDir, f))
+for (const dir of [THUMB_DIR, VIDEO_DIR]) {
+    const absDir = join(cwd, dir)
+    if (existsSync(absDir)) {
+        for (const f of readdirSync(absDir)) {
+            fileMap.set(`${dir}/${f}`, join(absDir, f))
         }
     }
 }

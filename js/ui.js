@@ -176,6 +176,13 @@ export class UIManager {
             this.hideVideoPlayOverlay()
         })
 
+        // Rotate FAB for touch devices
+        document.getElementById("fab-rotate").addEventListener("pointerdown", (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (this.app.input) this.app.input._rotateHeld()
+        })
+
         // Custom URL radio toggle
         const customRadio = document.querySelector('input[name="puzzle-source"][value="custom"]')
         customRadio.addEventListener("change", () => {
@@ -293,6 +300,30 @@ export class UIManager {
     }
 
     showHelp() {
+        // Show relevant control sections based on device capabilities
+        const hasTouch = navigator.maxTouchPoints > 0
+        const lastType = this.app.input ? this.app.input._lastPointerType : "mouse"
+        const mouseSection = document.getElementById("help-mouse-controls")
+        const touchSection = document.getElementById("help-touch-controls")
+        const kbSection = document.getElementById("help-keyboard-controls")
+
+        if (hasTouch && lastType === "touch") {
+            // Touch-primary device
+            mouseSection.style.display = "none"
+            touchSection.style.display = ""
+            kbSection.style.display = "none"
+        } else if (hasTouch) {
+            // Hybrid device — show all
+            mouseSection.style.display = ""
+            touchSection.style.display = ""
+            kbSection.style.display = ""
+        } else {
+            // Mouse-only
+            mouseSection.style.display = ""
+            touchSection.style.display = "none"
+            kbSection.style.display = ""
+        }
+
         this._showDialog(this.helpDialog)
     }
 

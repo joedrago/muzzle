@@ -4,7 +4,7 @@ import { generatePuzzle, calculateGrid } from "./puzzle.js"
 import { ChunkManager } from "./piece.js"
 import { InputManager } from "./input.js"
 import { StateManager } from "./state.js"
-import { UIManager, loadLocalPresets, resolveUrl, setPresets } from "./ui.js?v=3"
+import { UIManager, loadLocalPresets, resolveUrl, setPresets } from "./ui.js?v=5"
 import { mat3 } from "./math-utils.js"
 
 class App {
@@ -34,6 +34,22 @@ class App {
             this.renderer.resize()
             this._needsRender = true
         })
+
+        // Orientation change (iOS Safari delays actual resize)
+        window.addEventListener("orientationchange", () => {
+            setTimeout(() => {
+                this.renderer.resize()
+                this._needsRender = true
+            }, 200)
+        })
+
+        // Visual viewport resize (handles virtual keyboard)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", () => {
+                this.renderer.resize()
+                this._needsRender = true
+            })
+        }
 
         // Handle WebGL context loss
         this.canvas.addEventListener("webglcontextlost", (e) => {
@@ -543,10 +559,14 @@ class App {
     }
 
     toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {})
+        const el = document.fullscreenElement || document.webkitFullscreenElement
+        if (!el) {
+            const doc = document.documentElement
+            const req = doc.requestFullscreen || doc.webkitRequestFullscreen
+            if (req) req.call(doc).catch(() => {})
         } else {
-            document.exitFullscreen().catch(() => {})
+            const exit = document.exitFullscreen || document.webkitExitFullscreen
+            if (exit) exit.call(document).catch(() => {})
         }
     }
 
@@ -585,7 +605,8 @@ class App {
     cleanup(skipInside = false) {
         const cam = this.renderer.camera
         const dpr = window.devicePixelRatio || 1
-        const toolbarPx = 44 * dpr
+        const toolbar = document.getElementById("toolbar")
+        const toolbarPx = (toolbar ? toolbar.getBoundingClientRect().height : 44) * dpr
         const usableW = this.canvas.width
         const usableH = this.canvas.height - toolbarPx
         const aspect = usableW / usableH
@@ -629,3 +650,9 @@ class App {
 // -- Bootstrap -----------------------------------------
 
 const _app = new App()
+
+// -- Service Worker Registration -----------------------
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {})
+}
