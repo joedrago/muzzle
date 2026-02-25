@@ -1,6 +1,11 @@
-const { app, BrowserWindow } = require("electron")
+const { app, BrowserWindow, session } = require("electron")
 const path = require("path")
 const fs = require("fs")
+
+// Ensure hardware acceleration for WebGL
+app.commandLine.appendSwitch("enable-gpu-rasterization")
+app.commandLine.appendSwitch("enable-webgl")
+app.commandLine.appendSwitch("ignore-gpu-blocklist")
 
 function loadConfig() {
     const configPath = path.join(__dirname, "config.json")
@@ -20,13 +25,19 @@ function createWindow() {
         }
     })
 
-    win.loadURL(config.endpoint)
+    // Clear cache on startup to ensure fresh code is loaded
+    session.defaultSession.clearCache().then(() => {
+        win.loadURL(config.endpoint)
+    })
 
     // Hide menu bar completely
     win.setMenuBarVisibility(false)
 
-    // Close window when the web page calls window.close()
-    // (triggered by Escape in idle state or gamepad quit combo)
+    // Open devtools in development (set MUZZLE_DEV=1 to enable)
+    if (process.env.MUZZLE_DEV) {
+        win.webContents.openDevTools({ mode: "detach" })
+    }
+
     win.on("page-title-updated", (e) => e.preventDefault())
 }
 
