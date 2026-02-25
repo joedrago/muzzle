@@ -18,7 +18,7 @@
 //
 // Axes: leftStick [0,1], rightStick [2,3]
 
-const DEAD_ZONE = 0.1
+const DEAD_ZONE = 0.05
 const NAV_REPEAT_DELAY = 400 // ms before first repeat
 const NAV_REPEAT_RATE = 120 // ms between repeats
 const DPAD_ACCEL = 800 // world units/sec^2 for d-pad movement
