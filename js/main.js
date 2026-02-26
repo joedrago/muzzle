@@ -479,8 +479,8 @@ class App {
             this._drawChunk(chunk, texture, pw, ph, 0.85, multiHighlight)
         }
 
-        // Gamepad highlights
-        if (this.gamepad.active) {
+        // Gamepad highlights (skip on completed puzzle)
+        if (this.gamepad.active && !this.completed) {
             // Green highlight on focused (non-held) chunk
             if (this.gamepad.highlightedChunkId !== null && !this._isChunkHeld(this.gamepad.highlightedChunkId)) {
                 const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)

@@ -8,9 +8,9 @@
 //   Y (3)       = Toggle solution overlay
 //   LB (4)      = Zoom out
 //   RB (5)      = Zoom in
-//   LT (6)      = Toggle mute
+//   LT (6)      = Cleanup
 //   RT (7)      = (unused)
-//   Select (8)  = Toggle help
+//   Select (8)  = Toggle mute
 //   Start (9)   = Open/close puzzle select dialog
 //   L3 (10)     = (unused)
 //   R3 (11)     = (unused)
@@ -135,8 +135,13 @@ export class GamepadManager {
             this._processCamera(dt)
         }
 
-        // LT: toggle mute (works in any non-dialog mode)
+        // LT: cleanup (works in any non-dialog mode)
         if (!this.app.dialogOpen && this._justPressed(BTN_LT)) {
+            this.app.cleanup(true)
+        }
+
+        // Select: toggle mute (works in any non-dialog mode)
+        if (!this.app.dialogOpen && this._justPressed(BTN_SELECT)) {
             this.app.toggleMute()
         }
 
@@ -254,11 +259,6 @@ export class GamepadManager {
         // Start: open puzzle select
         if (this._justPressed(BTN_START)) {
             this.app.ui.showPuzzleSelect()
-        }
-
-        // Select: cleanup (no confirmation)
-        if (this._justPressed(BTN_SELECT)) {
-            this.app.cleanup(true)
         }
     }
 
@@ -601,7 +601,8 @@ export class GamepadManager {
                 `${b("X")} Rotate`,
                 `${b("R")} Pan camera`,
                 `${b("LB")} ${b("RB")} Zoom`,
-                `${b("LT")} Mute`
+                `${b("LT")} Cleanup`,
+                `${b("Sel")} Mute`
             ]
         } else {
             lines = [
@@ -611,9 +612,9 @@ export class GamepadManager {
                 `${b("Y")} Solution`,
                 `${b("R")} Pan camera`,
                 `${b("LB")} ${b("RB")} Zoom`,
-                `${b("LT")} Mute`,
-                `${b("Start")} New puzzle`,
-                `${b("Sel")} Cleanup`
+                `${b("LT")} Cleanup`,
+                `${b("Sel")} Mute`,
+                `${b("Start")} New puzzle`
             ]
         }
 
