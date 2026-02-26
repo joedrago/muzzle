@@ -485,7 +485,7 @@ class App {
             if (this.gamepad.highlightedChunkId !== null && !this._isChunkHeld(this.gamepad.highlightedChunkId)) {
                 const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
                 if (hlChunk) {
-                    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 150)
+                    const pulse = 0.2 + 0.2 * Math.sin(performance.now() / 150)
                     this._drawChunk(hlChunk, texture, pw, ph, 1.0, 0.0, pulse)
                     this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
                 }
