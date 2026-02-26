@@ -283,6 +283,52 @@ export class ChunkManager {
         }
 
         this.removeChunk(mergeId)
+
+        // After merging, check if any border/edge piece in the combined chunk
+        // is close to its solved position in the solution box (centered at origin).
+        // If so, snap the entire chunk to align with the solution overlay.
+        this._trySnapToSolutionBox(keepId)
+    }
+
+    // Check if any border piece in a chunk is within snap tolerance of its
+    // solved position in the solution box, and if so move the chunk to align.
+    _trySnapToSolutionBox(chunkId) {
+        const chunk = this.chunks.get(chunkId)
+        if (!chunk) return
+
+        // Only snap to solution box when chunk rotation is 0 (solution has no rotation)
+        if (chunk.rotation !== 0) return
+
+        const { cols, rows, pieceW, pieceH, puzzleWidth, puzzleHeight } = this.puzzleData
+        const snapThreshold = pieceW * 0.3
+        const snapThresholdSq = snapThreshold * snapThreshold
+
+        // Solution box top-left in world space
+        const solOriginX = -puzzleWidth / 2
+        const solOriginY = -puzzleHeight / 2
+
+        for (const pieceId of chunk.pieces) {
+            const piece = this.pieces[pieceId]
+
+            // Only check border/edge pieces (pieces on the puzzle boundary)
+            if (piece.col !== 0 && piece.col !== cols - 1 && piece.row !== 0 && piece.row !== rows - 1) continue
+
+            // Where the piece currently is in world space
+            const currentWorldPos = this._getPieceWorldPos(piece, chunk)
+
+            // Where it should be in the solved puzzle (solution box centered at origin)
+            const solvedWorldPos = [solOriginX + piece.col * pieceW, solOriginY + piece.row * pieceH]
+
+            const distSq = vec2.distanceSq(currentWorldPos, solvedWorldPos)
+
+            if (distSq < snapThresholdSq) {
+                // Compute the offset needed to align this piece to its solved position
+                const offsetX = solvedWorldPos[0] - currentWorldPos[0]
+                const offsetY = solvedWorldPos[1] - currentWorldPos[1]
+                chunk.setPosition(chunk.x + offsetX, chunk.y + offsetY)
+                return // aligned — done
+            }
+        }
     }
 
     // -- Win detection ---------------------------------

@@ -8,7 +8,7 @@
 //   Y (3)       = Toggle solution overlay
 //   LB (4)      = Zoom out
 //   RB (5)      = Zoom in
-//   LT (6)      = (unused)
+//   LT (6)      = Toggle mute
 //   RT (7)      = (unused)
 //   Select (8)  = Toggle help
 //   Start (9)   = Open/close puzzle select dialog
@@ -21,9 +21,9 @@
 const DEAD_ZONE = 0.05
 const NAV_REPEAT_DELAY = 400 // ms before first repeat
 const NAV_REPEAT_RATE = 120 // ms between repeats
-const DPAD_ACCEL = 400 // world units/sec^2 for d-pad movement
-const DPAD_MAX_SPEED = 600 // world units/sec max d-pad speed
-const ANALOG_MAX_SPEED = 700 // world units/sec at full tilt
+const DPAD_ACCEL = 1200 // world units/sec^2 for d-pad movement
+const DPAD_MAX_SPEED = 1200 // world units/sec max d-pad speed
+const ANALOG_MAX_SPEED = 1400 // world units/sec at full tilt
 const CAMERA_PAN_SPEED = 800 // world units/sec for right stick camera pan
 const ZOOM_SPEED = 2.0 // zoom multiplier per second
 const QUIT_HOLD_MS = 500 // hold Start+Select for this long to quit
@@ -34,6 +34,7 @@ const BTN_X = 2
 const BTN_Y = 3
 const BTN_LB = 4
 const BTN_RB = 5
+const BTN_LT = 6
 const BTN_SELECT = 8
 const BTN_START = 9
 const BTN_DPAD_UP = 12
@@ -132,6 +133,11 @@ export class GamepadManager {
         // Always process camera (right stick + bumper zoom) unless dialog is open
         if (!this.app.dialogOpen) {
             this._processCamera(dt)
+        }
+
+        // LT: toggle mute (works in any non-dialog mode)
+        if (!this.app.dialogOpen && this._justPressed(BTN_LT)) {
+            this.app.toggleMute()
         }
 
         // Update the on-screen button legend
@@ -594,7 +600,8 @@ export class GamepadManager {
                 `${b("B")} Cancel`,
                 `${b("X")} Rotate`,
                 `${b("R")} Pan camera`,
-                `${b("LB")} ${b("RB")} Zoom`
+                `${b("LB")} ${b("RB")} Zoom`,
+                `${b("LT")} Mute`
             ]
         } else {
             lines = [
@@ -604,6 +611,7 @@ export class GamepadManager {
                 `${b("Y")} Solution`,
                 `${b("R")} Pan camera`,
                 `${b("LB")} ${b("RB")} Zoom`,
+                `${b("LT")} Mute`,
                 `${b("Start")} New puzzle`,
                 `${b("Sel")} Cleanup`
             ]

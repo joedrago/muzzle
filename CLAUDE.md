@@ -68,7 +68,8 @@ muzzle/
 - **ChunkManager**: manages all chunks, handles snap detection, merging, hit testing
 - Initially every piece is its own chunk
 - `trySnap(chunkId)` — after drop, checks border pieces for neighbors within threshold (30% of piece size), requires matching rotation, recursive for cascading snaps
-- `_mergeChunks()` — aligns positions, re-parents pieces, removes merged chunk
+- `_mergeChunks()` — aligns positions, re-parents pieces, removes merged chunk, then calls `_trySnapToSolutionBox()`
+- `_trySnapToSolutionBox()` — after merge, if any border piece in the chunk is within snap tolerance of its solved position in the solution box (centered at origin), moves the entire chunk to align with the solution overlay
 - `isComplete()` — single chunk with all pieces (any rotation)
 - `hitTest(worldX, worldY)` — inverse transform → AABB check → pointInPolygon
 - `cleanup()` — reorganize all chunks into a grid layout
@@ -89,19 +90,19 @@ muzzle/
 
 - Polls `navigator.getGamepads()` every frame via render loop
 - Button edge detection (justPressed vs isPressed) for clean single-fire events
-- Dead zone (0.2) on analog sticks
+- Dead zone (0.05) on analog sticks
 - **Three modes**: Navigation (no piece held), Holding (piece held), Dialog (UI open)
 - **Navigation mode**: D-pad/left stick highlights nearest chunk in direction (cone-based search)
     - A picks up highlighted chunk, B quits, X rotates in place, Y toggles solution
     - Start opens puzzle select, Select toggles help
-- **Holding mode**: D-pad accelerates (800 u/s², max 1200 u/s), analog stick proportional (1400 u/s max)
-    - Camera auto-follows held piece with smooth lerp
+- **Holding mode**: D-pad accelerates (1200 u/s², max 1200 u/s), analog stick proportional (1400 u/s max)
     - A places piece (triggers snap), B cancels (returns to pre-pickup position), X rotates
     - Instant stop on d-pad release for precision
 - **Dialog mode**: D-pad/left stick navigates focusable elements, A activates, B cancels
     - 2D grid navigation for preset thumbnails, linear navigation for other elements
     - LB/RB quick-navigate through preset list
 - Quit combo: Hold Start+Select for 500ms → `window.close()`
+- LT toggles mute (works in navigation and holding modes)
 - Right stick always pans camera, LB/RB zoom (when not in dialog)
 - Clears highlight when mouse/touch input is detected
 
