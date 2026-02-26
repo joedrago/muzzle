@@ -9,7 +9,7 @@
 //   LB (4)      = Zoom out
 //   RB (5)      = Zoom in
 //   LT (6)      = Cleanup
-//   RT (7)      = (unused)
+//   RT (7)      = Select nearest single piece
 //   Select (8)  = Toggle mute
 //   Start (9)   = Open/close puzzle select dialog
 //   L3 (10)     = (unused)
@@ -35,6 +35,7 @@ const BTN_Y = 3
 const BTN_LB = 4
 const BTN_RB = 5
 const BTN_LT = 6
+const BTN_RT = 7
 const BTN_SELECT = 8
 const BTN_START = 9
 const BTN_DPAD_UP = 12
@@ -269,9 +270,48 @@ export class GamepadManager {
             this.app.toggleSolution()
         }
 
+        // RT: jump to nearest single-piece chunk
+        if (this._justPressed(BTN_RT)) {
+            this._selectNearestSinglePiece()
+        }
+
         // Start: open puzzle select
         if (this._justPressed(BTN_START)) {
             this.app.ui.showPuzzleSelect()
+        }
+    }
+
+    _selectNearestSinglePiece() {
+        const cm = this.app.cm
+        if (!cm) return
+
+        // Find the reference position: current highlight center, or screen center
+        let refPos
+        if (this.highlightedChunkId !== null && cm.chunks.has(this.highlightedChunkId)) {
+            refPos = cm.getChunkWorldCenter(this.highlightedChunkId)
+        } else {
+            const renderer = this.app.renderer
+            refPos = renderer.screenToWorld(this.app.canvas.clientWidth / 2, this.app.canvas.clientHeight / 2)
+        }
+
+        let bestId = null
+        let bestDist = Infinity
+
+        for (const chunk of cm.chunks.values()) {
+            if (chunk.id === this.highlightedChunkId) continue
+            if (chunk.pieces.size !== 1) continue
+            const center = cm.getChunkWorldCenter(chunk.id)
+            const d = (center[0] - refPos[0]) ** 2 + (center[1] - refPos[1]) ** 2
+            if (d < bestDist) {
+                bestDist = d
+                bestId = chunk.id
+            }
+        }
+
+        if (bestId !== null) {
+            this.highlightedChunkId = bestId
+            this._ensureHighlightVisible()
+            this.app.markDirty()
         }
     }
 
@@ -638,6 +678,7 @@ export class GamepadManager {
                 `${b("R")} Pan camera`,
                 `${b("LB")} ${b("RB")} Zoom`,
                 `${b("LT")} Cleanup`,
+                `${b("RT")} Lone piece`,
                 `${b("Sel")} Mute`,
                 `${b("Start")} New puzzle`
             ]
