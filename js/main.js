@@ -481,20 +481,20 @@ class App {
 
         // Gamepad highlights (skip on completed puzzle)
         if (this.gamepad.active && !this.completed) {
-            // Green highlight on focused (non-held) chunk
+            // Inverted color on focused (non-held) chunk — visible on any piece color
             if (this.gamepad.highlightedChunkId !== null && !this._isChunkHeld(this.gamepad.highlightedChunkId)) {
                 const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
                 if (hlChunk) {
-                    const pulse = 0.7 + 0.3 * Math.sin(performance.now() / 300)
-                    this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
+                    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 300)
+                    this._drawChunk(hlChunk, texture, pw, ph, 1.0, 0.0, pulse)
                 }
             }
-            // Cyan highlight on held chunk
+            // Inverted color on held chunk
             const heldId = this.input ? this.input.heldChunkId : null
             if (heldId !== null) {
                 const heldChunk = this.cm.chunks.get(heldId)
                 if (heldChunk) {
-                    this._drawChunkHighlight(heldChunk, pw, ph, [0.2, 0.9, 1.0, 0.9])
+                    this._drawChunk(heldChunk, texture, pw, ph, 0.85, 0.0, 0.7)
                 }
             }
         }
@@ -537,19 +537,7 @@ class App {
         return false
     }
 
-    _drawChunkHighlight(chunk, pw, ph, color) {
-        const worldMatrix = chunk.worldMatrix
-        for (const pieceId of chunk.pieces) {
-            const piece = this.puzzleData.pieces[pieceId]
-            const pieceOffsetX = piece.col * pw
-            const pieceOffsetY = piece.row * ph
-            const pieceTranslate = mat3.translate(pieceOffsetX, pieceOffsetY)
-            const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
-            this.renderer.drawPieceHighlight(piece.outlineVBO, piece.outlineVertCount, modelMatrix, color)
-        }
-    }
-
-    _drawChunk(chunk, texture, pw, ph, alpha, highlight) {
+    _drawChunk(chunk, texture, pw, ph, alpha, highlight, invert = 0.0) {
         const worldMatrix = chunk.worldMatrix
 
         for (const pieceId of chunk.pieces) {
@@ -563,7 +551,7 @@ class App {
             const pieceTranslate = mat3.translate(pieceOffsetX, pieceOffsetY)
             const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
 
-            this.renderer.drawPiece(piece.vbo, piece.ibo, piece.triCount, modelMatrix, texture, alpha, highlight)
+            this.renderer.drawPiece(piece.vbo, piece.ibo, piece.triCount, modelMatrix, texture, alpha, highlight, invert)
             const outlineAlpha = this.completed ? 0.125 : 0.5
             this.renderer.drawPieceOutline(piece.outlineVBO, piece.outlineVertCount, modelMatrix, [0.9, 0.9, 0.9, outlineAlpha])
         }
