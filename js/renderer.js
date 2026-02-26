@@ -318,6 +318,25 @@ export class Renderer {
         this.drawRect(wx1, wy1, wx2 - wx1, wy2 - wy1, color)
     }
 
+    // Draw a highlight outline around a piece (for gamepad focus / held indicator)
+    drawPieceHighlight(outlineVBO, vertexCount, modelMatrix, color) {
+        const gl = this.gl
+        const locs = this.flatLocs
+        const cam = this.getCameraMatrix()
+
+        gl.useProgram(this.flatProgram)
+        gl.uniformMatrix3fv(locs.u_camera, false, cam)
+        gl.uniformMatrix3fv(locs.u_model, false, modelMatrix)
+        gl.uniform4fv(locs.u_color, color)
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, outlineVBO)
+        gl.enableVertexAttribArray(locs.a_position)
+        gl.vertexAttribPointer(locs.a_position, 2, gl.FLOAT, false, 0, 0)
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount)
+        gl.disableVertexAttribArray(locs.a_position)
+    }
+
     // Draw solution overlay (full puzzle quad)
     drawSolutionOverlay(texture, puzzleX, puzzleY, puzzleW, puzzleH, alpha = 0.35) {
         const gl = this.gl

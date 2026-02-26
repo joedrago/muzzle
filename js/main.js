@@ -481,20 +481,22 @@ class App {
 
         // Gamepad highlights (skip on completed puzzle)
         if (this.gamepad.active && !this.completed) {
-            // Inverted color on focused (non-held) chunk — visible on any piece color
+            // Focused (non-held) chunk: invert + green border
             if (this.gamepad.highlightedChunkId !== null && !this._isChunkHeld(this.gamepad.highlightedChunkId)) {
                 const hlChunk = this.cm.chunks.get(this.gamepad.highlightedChunkId)
                 if (hlChunk) {
-                    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 300)
+                    const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 150)
                     this._drawChunk(hlChunk, texture, pw, ph, 1.0, 0.0, pulse)
+                    this._drawChunkHighlight(hlChunk, pw, ph, [0.2, 1.0, 0.3, pulse])
                 }
             }
-            // Inverted color on held chunk
+            // Held chunk: invert + cyan border
             const heldId = this.input ? this.input.heldChunkId : null
             if (heldId !== null) {
                 const heldChunk = this.cm.chunks.get(heldId)
                 if (heldChunk) {
                     this._drawChunk(heldChunk, texture, pw, ph, 0.85, 0.0, 0.7)
+                    this._drawChunkHighlight(heldChunk, pw, ph, [0.2, 0.9, 1.0, 0.9])
                 }
             }
         }
@@ -535,6 +537,18 @@ class App {
         if (id === this.input.heldChunkId) return true
         if (this.input.heldChunkIds && this.input.heldChunkIds.includes(id)) return true
         return false
+    }
+
+    _drawChunkHighlight(chunk, pw, ph, color) {
+        const worldMatrix = chunk.worldMatrix
+        for (const pieceId of chunk.pieces) {
+            const piece = this.puzzleData.pieces[pieceId]
+            const pieceOffsetX = piece.col * pw
+            const pieceOffsetY = piece.row * ph
+            const pieceTranslate = mat3.translate(pieceOffsetX, pieceOffsetY)
+            const modelMatrix = mat3.multiply(worldMatrix, pieceTranslate)
+            this.renderer.drawPieceHighlight(piece.outlineVBO, piece.outlineVertCount, modelMatrix, color)
+        }
     }
 
     _drawChunk(chunk, texture, pw, ph, alpha, highlight, invert = 0.0) {
