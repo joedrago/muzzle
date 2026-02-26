@@ -495,7 +495,7 @@ class App {
             if (heldId !== null) {
                 const heldChunk = this.cm.chunks.get(heldId)
                 if (heldChunk) {
-                    this._drawChunk(heldChunk, texture, pw, ph, 0.85, 0.0, 0.7)
+                    this._drawChunk(heldChunk, texture, pw, ph, 0.85, 0.0, 0.2)
                     this._drawChunkHighlight(heldChunk, pw, ph, [0.2, 0.9, 1.0, 0.9])
                 }
             }
