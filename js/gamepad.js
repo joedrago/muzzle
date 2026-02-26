@@ -214,9 +214,22 @@ export class GamepadManager {
         }
 
         // D-pad / left stick navigation with repeat
-        const [dx, dy] = this._getLeftDir()
-        const hasDir = dx !== 0 || dy !== 0
-        const dirKey = hasDir ? `${Math.sign(dx)},${Math.sign(dy)}` : null
+        // Quantize to cardinal direction so analog stick wobble doesn't
+        // constantly reset the repeat delay by registering as a "new" direction
+        const [rawDx, rawDy] = this._getLeftDir()
+        const hasDir = rawDx !== 0 || rawDy !== 0
+        let dx = rawDx,
+            dy = rawDy
+        if (hasDir) {
+            if (Math.abs(rawDx) >= Math.abs(rawDy)) {
+                dx = Math.sign(rawDx)
+                dy = 0
+            } else {
+                dx = 0
+                dy = Math.sign(rawDy)
+            }
+        }
+        const dirKey = hasDir ? `${dx},${dy}` : null
 
         if (hasDir) {
             const now = Date.now()
@@ -529,9 +542,21 @@ export class GamepadManager {
         const ui = this.app.ui
 
         // D-pad / left stick for focus navigation
-        const [dx, dy] = this._getLeftDir()
-        const hasDir = dx !== 0 || dy !== 0
-        const dirKey = hasDir ? `${Math.sign(dx)},${Math.sign(dy)}` : null
+        // Quantize to cardinal direction (same as navigation mode)
+        const [rawDx, rawDy] = this._getLeftDir()
+        const hasDir = rawDx !== 0 || rawDy !== 0
+        let dx = rawDx,
+            dy = rawDy
+        if (hasDir) {
+            if (Math.abs(rawDx) >= Math.abs(rawDy)) {
+                dx = Math.sign(rawDx)
+                dy = 0
+            } else {
+                dx = 0
+                dy = Math.sign(rawDy)
+            }
+        }
+        const dirKey = hasDir ? `${dx},${dy}` : null
 
         if (hasDir) {
             const now = Date.now()
